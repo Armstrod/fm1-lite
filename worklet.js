@@ -69,15 +69,23 @@ class FM1 extends AudioWorkletProcessor {
       if (m.type === "buttons" || m.type === "keys") this.queue.push(m);
       else if (m.type === "enc") ex.web_enc(m.role, m.n | 0);
       else if (m.type === "master") ex.web_master(Math.round(this.masterMax * m.value));
-      else if (m.type === "midi") { const f = ex.web_midi || ex.web_midi_in; if (f) f(m.data[0] | 0, m.data[1] | 0, m.data[2] | 0); }
+      else if (m.type === "midi") this.midi(m.data[0] | 0, m.data[1] | 0, m.data[2] | 0);
       else if (m.type === "midis") { for (const e of m.events) this.mq.push(e); this.mq.sort((a, b) => a[0] - b[0]); }
       else if (m.type === "midiclear") {            /* stop: what was scheduled goes, every note held lets go */
         this.mq = [];
-        const f = ex.web_midi || ex.web_midi_in;
-        if (f) for (let ch = 0; ch < 16; ch++) { f(0xB0 | ch, 123, 0); for (const n of m.held || []) if ((n >> 8) === ch) f(0x80 | ch, n & 127, 0); }
+        for (let ch = 0; ch < 16; ch++) { this.midi(0xB0 | ch, 123, 0); for (const n of m.held || []) if ((n >> 8) === ch) this.midi(0x80 | ch, n & 127, 0); }
       }
       else if (m.type === "visible") this.period = m.on ? 1 / 20 : 1 / 2;
     } catch (err) { this.fail(err); }
+  }
+
+  /* a channel message into the firmware: Felucca's family takes the bytes (web_midi), fm1-base's (X0X, Polly, LOOM-8,
+   * TOUGE next) a USB-MIDI packet with its port (web_midi_in(port, cin | status << 8 | d1 << 16 | d2 << 24)) */
+  midi(st, d1, d2) {
+    const ex = this.ex;
+    if (!ex) return;
+    if (ex.web_midi) ex.web_midi(st, d1, d2);
+    else if (ex.web_midi_in) ex.web_midi_in(0, ((st >> 4) & 15) | (st << 8) | (d1 << 16) | (d2 << 24));
   }
 
   fail(err) {
@@ -136,8 +144,8 @@ class FM1 extends AudioWorkletProcessor {
         }
       }
       if (this.mq.length) {                         /* the file player's notes due in this quantum (2.9 ms steps) */
-        const f = ex.web_midi || ex.web_midi_in, end = currentFrame + outputs[0][0].length;
-        while (this.mq.length && this.mq[0][0] < end) { const e = this.mq.shift(); if (f) f(e[1], e[2], e[3]); }
+        const end = currentFrame + outputs[0][0].length;
+        while (this.mq.length && this.mq[0][0] < end) { const e = this.mq.shift(); this.midi(e[1], e[2], e[3]); }
       }
       const out = outputs[0], n = out[0].length, t0 = clock();
       ex.web_render(n);

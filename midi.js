@@ -36,7 +36,7 @@ function parseMidi(buf) {
         else if (hi === 0x80 || (hi === 0x90 && b === 0)) {
           const k = ch + ":" + a, s = open.get(k);
           if (s) { tr.notes.push({ ch, n: a, t0: s[0], t1: Math.max(tick, s[0] + 1), v: s[1] }); open.delete(k); }
-        } else if (hi === 0xC0) tr.programs.add(a);
+        } else if (hi === 0xC0) { tr.programs.add(a); if (!tr.prog) tr.prog = {}; if (tr.prog[ch] === undefined) tr.prog[ch] = a; }
       }
     }
     for (const [k, s] of open) { const [ch, n] = k.split(":").map(Number); tr.notes.push({ ch, n, t0: s[0], t1: tick, v: s[1] }); }
@@ -48,7 +48,8 @@ function parseMidi(buf) {
   for (const tr of tracks)
     for (const ch of tr.channels) {
       const notes = tr.notes.filter((n) => n.ch === ch);
-      if (notes.length) parts.push({ name: tr.name || (ch === 9 ? "Drums" : "Channel " + (ch + 1)), ch, notes });
+      const program = tr.prog && tr.prog[ch] !== undefined ? tr.prog[ch] : 0;
+      if (notes.length) parts.push({ name: tr.name || (ch === 9 ? "Drums" : "Channel " + (ch + 1)), ch, notes, program });
     }
   tempos.sort((a, b) => a[0] - b[0]);
   if (!tempos.length || tempos[0][0] > 0) tempos.unshift([0, 500000]);
@@ -65,8 +66,13 @@ function parseMidi(buf) {
 }
 
 // ------------------------------------------------------------------ the split: the FM-1's four parts
-const ROLES = ["off", "lead", "bass", "chords", "drums"];
-const ROLE_CH = { chords: 0, bass: 1, lead: 2, drums: 3 };     /* TOUGE: track 1 STABS, 2 BASS, 3 LEAD, 4 DRUMS */
+/* the firmware's parts and their channels: Felucca's family (TOUGE 0.2, Daurade...): four tracks on channels 1..4; a
+ * firmware whose firmware.json lists "parts" (TOUGE NEXT: eight, on a General MIDI engine) gets those */
+const LAYOUT4 = { roles: ["lead", "bass", "chords", "drums"], ch: { chords: 0, bass: 1, lead: 2, drums: 3 }, gm: false };
+const LAYOUT8 = { roles: ["lead", "bass", "chords", "keys", "guitar", "pad", "hits", "drums"],
+                  ch: { lead: 0, bass: 1, chords: 2, keys: 3, guitar: 4, pad: 5, hits: 6, drums: 9 }, gm: true };
+const layout = () => (current && current.parts === 8 ? LAYOUT8 : LAYOUT4);
+const ROLE_LABEL = { chords: "STABS" };
 function stats(p) {
   const ns = p.notes, avg = ns.reduce((a, n) => a + n.n, 0) / ns.length;
   let poly = 0;                                    /* how often notes overlap: chords */
@@ -87,13 +93,25 @@ function autoAssign(parts) {
   if (rest.length) {
     const lead = rest.slice().sort((a, b) => leadScore(b) - leadScore(a))[0];
     roles[lead] = "lead";
-    for (const i of rest) if (i !== lead) roles[i] = "chords";
+    const L = layout(), taken = new Set(["lead", "bass", "drums"]);
+    for (const i of rest) {
+      if (i === lead) continue;
+      let r = "chords";
+      if (L.roles.length > 4) {                    /* eight parts: by the file's own sound, where it says */
+        const g = parts[i].program;
+        const want = g < 8 || (g >= 16 && g < 24) ? "keys" : g >= 24 && g < 32 ? "guitar"
+          : (g >= 48 && g < 55) || (g >= 88 && g < 96) ? "pad" : g === 55 || (g >= 56 && g < 64) ? "hits" : "chords";
+        r = !taken.has(want) ? want : ["chords", "keys", "pad", "hits", "guitar"].find((x) => !taken.has(x)) || "chords";
+        taken.add(r);
+      }
+      roles[i] = r;
+    }
   }
   return roles;
 }
 // one part's notes as played on the FM-1: the lead and the bass one at a time (the top / bottom note wins), the chords
 // at most three at once, each moved into its register by octaves unless the player set an octave
-const RANGE = { lead: [60, 91], bass: [28, 52], chords: [52, 79], drums: [0, 127] };
+const RANGE = { lead: [60, 91], bass: [28, 52], chords: [52, 79], keys: [45, 84], guitar: [40, 72], pad: [48, 79], hits: [48, 84], drums: [0, 127] };
 function voice(role, notes, octave) {
   let ns = notes.map((n) => ({ ...n }));
   if (role !== "drums") {
@@ -118,11 +136,12 @@ function voice(role, notes, octave) {
       out.push(n);
     }
     ns = out;
-  } else if (role === "chords") {                  /* three at a time: the newest three */
+  } else if (role !== "drums") {                   /* three at a time: the newest three (four for keys and pads) */
+    const MAXN = role === "keys" || role === "pad" ? 4 : 3;
     const out = [];
     for (const n of ns) {
       const sounding = out.filter((m) => m.s1 > n.s0 && m.s0 <= n.s0);
-      if (sounding.length >= 3) { const oldest = sounding.sort((a, b) => a.s0 - b.s0)[0]; oldest.s1 = Math.max(oldest.s0 + 0.01, n.s0 - 0.002); }
+      if (sounding.length >= MAXN) { const oldest = sounding.sort((a, b) => a.s0 - b.s0)[0]; oldest.s1 = Math.max(oldest.s0 + 0.01, n.s0 - 0.002); }
       out.push(n);
     }
     ns = out;
@@ -131,14 +150,15 @@ function voice(role, notes, octave) {
 }
 
 // ------------------------------------------------------------------ the player
-const MP = { file: null, roles: [], octs: [], speed: 1, transpose: 0, loop: true, playing: false, t0: 0, sentTo: 0,
+const MP = { file: null, roles: [], octs: [], speed: 1, transpose: 0, loop: true, fileSounds: true, playing: false, t0: 0, sentTo: 0,
              timer: null, events: [], held: [] };
 function buildEvents() {
   const ev = [];
   MP.file.parts.forEach((p, i) => {
     const role = MP.roles[i];
     if (role === "off") return;
-    const ch = ROLE_CH[role];
+    const ch = layout().ch[role];
+    if (ch === undefined) return;
     for (const n of voice(role, p.notes, MP.octs[i])) {
       const note = role === "drums" ? n.n : Math.max(0, Math.min(127, n.n + MP.transpose));
       ev.push([n.s0 / MP.speed, 0x90 | ch, note, Math.max(1, n.v)]);
@@ -177,6 +197,15 @@ function midiPlay() {
   MP.t0 = ac.currentTime + 0.15;
   MP.sentTo = 0;
   MP.held = [];
+  const L = layout();
+  if (L.gm && MP.fileSounds) {                      /* a GM firmware: each part takes the file's own sound */
+    const pre = [];
+    MP.file.parts.forEach((p, i) => {
+      const ch = L.ch[MP.roles[i]];
+      if (ch !== undefined && ch !== 9) pre.push([Math.round((MP.t0 - 0.05) * ac.sampleRate), 0xC0 | ch, p.program, 0]);
+    });
+    if (pre.length) node.port.postMessage({ type: "midis", events: pre });
+  }
   pump();
   MP.timer = setInterval(pump, 250);
   $("midiPlay").textContent = "Stop";
@@ -204,7 +233,7 @@ function renderParts() {
     row.querySelector("b").textContent = p.name;
     row.querySelector("small").textContent = `${p.ch === 9 ? "drums" : "ch " + (p.ch + 1)} · ${s.count} notes · ${lo}–${hi}`;
     const r = row.querySelector(".mrole");
-    for (const k of ROLES) r.add(new Option(k === "chords" ? "STABS" : k.toUpperCase(), k, false, MP.roles[i] === k));
+    for (const k of ["off", ...layout().roles]) r.add(new Option(ROLE_LABEL[k] || k.toUpperCase(), k, false, MP.roles[i] === k));
     r.addEventListener("change", () => { MP.roles[i] = r.value; if (MP.playing) midiPlay(); });
     const o = row.querySelector(".moct");
     for (const k of ["auto", -2, -1, 0, 1, 2]) o.add(new Option(k === "auto" ? "oct auto" : (k > 0 ? "+" : "") + k + " oct", String(k), false, String(MP.octs[i]) === String(k)));
@@ -231,5 +260,7 @@ $("midiBtn").addEventListener("click", () => $("midiSheet").showModal());
 $("midiFile").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) midiOpen(f); });
 $("midiPlay").addEventListener("click", () => (MP.playing ? midiStop() : midiPlay()));
 $("midiLoop").addEventListener("change", () => { MP.loop = $("midiLoop").checked; });
+$("midiSounds").addEventListener("change", () => { MP.fileSounds = $("midiSounds").checked; if (MP.playing) midiPlay(); });
+$("midiBtn").addEventListener("click", () => { $("midiSoundsRow").hidden = !layout().gm; if (MP.file) { MP.roles = MP.roles.map((r) => (r === "off" || layout().roles.includes(r) ? r : "chords")); renderParts(); } });
 $("midiSpeed").addEventListener("change", () => { MP.speed = Math.max(0.25, Math.min(2, (+$("midiSpeed").value || 100) / 100)); if (MP.playing) midiPlay(); });
 $("midiTr").addEventListener("change", () => { MP.transpose = Math.max(-12, Math.min(12, Math.round(+$("midiTr").value || 0))); if (MP.playing) midiPlay(); });

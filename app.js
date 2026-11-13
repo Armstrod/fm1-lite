@@ -388,7 +388,7 @@ async function syncRepo(manual) {
         await DB.filePut(id, b);
         if (was) updated++; else added++;
       }
-      next.push({ id, name, author: cfg.name.split("/")[0], about: info.about || t.path, sha: t.sha, path: t.path,
+      next.push({ id, name, author: cfg.name.split("/")[0], about: info.about || t.path, sha: t.sha, path: t.path, parts: info.parts || 4,
                   repo: "https://github.com/" + cfg.name + "/tree/" + (cfg.branch || "main") + "/" + dir });
       old.delete(id);
     }
