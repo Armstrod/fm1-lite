@@ -17,6 +17,7 @@
   <header>
     <button id="fwBtn" class="fw" type="button"><span id="fwName">Choose a firmware</span><small id="fwBy"></small><i>▾</i></button>
     <div class="meter" id="meter"><span id="cpu">–</span><b><i id="cpuBar"></i></b></div>
+    <button id="midiBtn" class="icon" type="button" aria-label="Play a MIDI file">♪</button>
     <button id="menuBtn" class="icon" type="button" aria-label="Settings">⋯</button>
   </header>
 
@@ -46,6 +47,25 @@
       <p class="fine" id="addMsg"></p>
     </details>
     <p class="fine">Catalogue updated <span id="catDate"></span>. ⚡ = heavy on phones.</p>
+  </div>
+</dialog>
+
+<dialog id="midiSheet">
+  <div class="sheet">
+    <div class="sheethead"><b>MIDI file</b><button class="icon" data-close type="button" aria-label="Close">✕</button></div>
+    <p class="fine">Open a <code>.mid</code> from this phone. It's split onto the FM-1's four parts (STABS, BASS, LEAD, DRUMS)
+      and played through the firmware that's on, with its own sounds: switch the firmware on first, and leave its own
+      sequencer stopped. The file stays on the phone.</p>
+    <label class="filebtn">Open a MIDI file…<input id="midiFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden></label>
+    <p id="midiTitle"></p>
+    <div id="midiParts"></div>
+    <div class="mctl">
+      <label>Speed % <input id="midiSpeed" type="number" min="25" max="200" step="5" value="100"></label>
+      <label>Transpose <input id="midiTr" type="number" min="-12" max="12" step="1" value="0"></label>
+      <label class="row"><input type="checkbox" id="midiLoop" checked> Loop</label>
+    </div>
+    <div class="mctl"><button id="midiPlay" type="button">Play</button><span id="midiPos" class="fine"></span></div>
+    <p class="fine" id="midiMsg"></p>
   </div>
 </dialog>
 
@@ -85,5 +105,6 @@
 
 <div id="updateBar" hidden><span>Update ready</span><button type="button" id="updateGo">Reload</button></div>
 <script src="app.js"></script>
+<script src="midi.js"></script>
 </body>
 </html>

@@ -94,3 +94,14 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .repo { display: flex; flex-direction: column; gap: 6px; }
 .repo summary { color: var(--accent); font-size: 14px; }
 .repo input { margin-top: 6px; }
+.mrow { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; background: var(--part);
+  border: 1px solid var(--edge); border-radius: 10px; padding: 7px 8px; }
+.mrow + .mrow { margin-top: 6px; }
+.mname { min-width: 0; } .mname b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mname small { color: var(--dim); font-size: 11px; }
+.mrow select { width: auto !important; font-size: 13px !important; padding: 6px !important; }
+.mctl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mctl label { flex-direction: row !important; align-items: center; gap: 6px !important; }
+.mctl input[type=number] { width: 64px; font: inherit; padding: 6px; border-radius: 8px; border: 1px solid var(--edge); background: #111; color: var(--fg); }
+#midiPlay { min-width: 90px; }
+#midiTitle { margin: 0; font-weight: 600; }

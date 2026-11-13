@@ -14,6 +14,7 @@ class FM1 extends AudioWorkletProcessor {
     this.ex = null; this.sentDraws = -1; this.sentWrites = -1; this.sentLeds = "";
     this.last = 0; this.period = 1 / 20; this.busy = 0; this.frames = 0;
     this.queue = []; this.nextOk = 0; this.ms = 0;
+    this.mq = [];                                   /* timed MIDI from the app's file player: [frame, status, d1, d2] */
     this.port.onmessage = (e) => this.onMessage(e.data);
   }
 
@@ -69,6 +70,12 @@ class FM1 extends AudioWorkletProcessor {
       else if (m.type === "enc") ex.web_enc(m.role, m.n | 0);
       else if (m.type === "master") ex.web_master(Math.round(this.masterMax * m.value));
       else if (m.type === "midi") { const f = ex.web_midi || ex.web_midi_in; if (f) f(m.data[0] | 0, m.data[1] | 0, m.data[2] | 0); }
+      else if (m.type === "midis") { for (const e of m.events) this.mq.push(e); this.mq.sort((a, b) => a[0] - b[0]); }
+      else if (m.type === "midiclear") {            /* stop: what was scheduled goes, every note held lets go */
+        this.mq = [];
+        const f = ex.web_midi || ex.web_midi_in;
+        if (f) for (let ch = 0; ch < 16; ch++) { f(0xB0 | ch, 123, 0); for (const n of m.held || []) if ((n >> 8) === ch) f(0x80 | ch, n & 127, 0); }
+      }
       else if (m.type === "visible") this.period = m.on ? 1 / 20 : 1 / 2;
     } catch (err) { this.fail(err); }
   }
@@ -127,6 +134,10 @@ class FM1 extends AudioWorkletProcessor {
           if (m.type === "buttons") ex.web_buttons(m.mask >>> 0); else ex.web_keys(m.mask >>> 0);
           this.nextOk = now + HOLD_MS;
         }
+      }
+      if (this.mq.length) {                         /* the file player's notes due in this quantum (2.9 ms steps) */
+        const f = ex.web_midi || ex.web_midi_in, end = currentFrame + outputs[0][0].length;
+        while (this.mq.length && this.mq[0][0] < end) { const e = this.mq.shift(); if (f) f(e[1], e[2], e[3]); }
       }
       const out = outputs[0], n = out[0].length, t0 = clock();
       ex.web_render(n);
