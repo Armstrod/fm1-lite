@@ -71,14 +71,16 @@ function knob(parent, label, role) {
   };
   draw();
   let drag = null;
+  /* a drag turns it: down or right = clockwise (more, the next, further down the screen), up or left = anticlockwise */
   d.addEventListener("pointerdown", (e) => {
     e.preventDefault(); try { d.setPointerCapture(e.pointerId); } catch {}; d.classList.add("active");
     drag = { x: e.clientX, y: e.clientY, acc: 0 };
   });
   d.addEventListener("pointermove", (e) => {
     if (!drag) return;
-    const dx = e.clientX - drag.x, dy = drag.y - e.clientY;
-    drag.acc += Math.abs(dx) > Math.abs(dy) ? dx : dy; drag.x = e.clientX; drag.y = e.clientY;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+    drag.acc += delta; drag.x = e.clientX; drag.y = e.clientY;
     const step = role === "master" ? 2 : 9, n = Math.trunc(drag.acc / step);
     if (!n) return;
     drag.acc -= n * step;
