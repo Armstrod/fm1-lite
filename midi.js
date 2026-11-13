@@ -36,7 +36,8 @@ function parseMidi(buf) {
         else if (hi === 0x80 || (hi === 0x90 && b === 0)) {
           const k = ch + ":" + a, s = open.get(k);
           if (s) { tr.notes.push({ ch, n: a, t0: s[0], t1: Math.max(tick, s[0] + 1), v: s[1] }); open.delete(k); }
-        } else if (hi === 0xC0) { tr.programs.add(a); if (!tr.prog) tr.prog = {}; if (tr.prog[ch] === undefined) tr.prog[ch] = a; }
+        } else if (hi === 0xB0 && a === 7) { if (!tr.vol) tr.vol = {}; if (tr.vol[ch] === undefined) tr.vol[ch] = b; }
+        else if (hi === 0xC0) { tr.programs.add(a); if (!tr.prog) tr.prog = {}; if (tr.prog[ch] === undefined) tr.prog[ch] = a; }
       }
     }
     for (const [k, s] of open) { const [ch, n] = k.split(":").map(Number); tr.notes.push({ ch, n, t0: s[0], t1: tick, v: s[1] }); }
@@ -49,7 +50,8 @@ function parseMidi(buf) {
     for (const ch of tr.channels) {
       const notes = tr.notes.filter((n) => n.ch === ch);
       const program = tr.prog && tr.prog[ch] !== undefined ? tr.prog[ch] : 0;
-      if (notes.length) parts.push({ name: tr.name || (ch === 9 ? "Drums" : "Channel " + (ch + 1)), ch, notes, program });
+      const hasProgram = !!(tr.prog && tr.prog[ch] !== undefined), volume = tr.vol ? tr.vol[ch] : undefined;
+      if (notes.length) parts.push({ name: tr.name || (ch === 9 ? "Drums" : "Channel " + (ch + 1)), ch, notes, program, hasProgram, volume });
     }
   tempos.sort((a, b) => a[0] - b[0]);
   if (!tempos.length || tempos[0][0] > 0) tempos.unshift([0, 500000]);
@@ -62,7 +64,7 @@ function parseMidi(buf) {
   for (const p of parts) for (const n of p.notes) { n.s0 = secs(n.t0); n.s1 = secs(n.t1); }
   const bpm = Math.round(60e6 / tempos[0][1]);
   const length = Math.max(0, ...parts.flatMap((p) => p.notes.map((n) => n.s1)));
-  return { parts, bpm, length };
+  return { parts, bpm, bpm10: Math.round(60e7 / tempos[0][1]) / 10, length };
 }
 
 // ------------------------------------------------------------------ the split: the FM-1's four parts
@@ -220,6 +222,41 @@ function midiStop() {
   $("midiPlay").textContent = "Play";
 }
 
+// ------------------------------------------------------------------ a song the firmware keeps (TOUGE NEXT)
+/* the split as it stands (roles, octaves, transpose) packed into a song (song.js) and sent to the firmware's slot as
+ * SysEx; the firmware checks it and answers. Speed and transpose are the firmware's then: they stay at the file's */
+let songWait = null;
+function songDone(reply) {
+  if (!songWait) return;
+  const w = songWait; songWait = null;
+  w(reply);
+}
+async function songKeep() {
+  if (!MP.file) { $("midiMsg").textContent = "Open a MIDI file first."; return; }
+  if (!node || !current || !current.songs) { $("midiMsg").textContent = "Switch on a firmware that keeps songs (TOUGE NEXT) first."; return; }
+  midiStop();
+  const parts = [];
+  MP.file.parts.forEach((p, i) => {
+    const role = MP.roles[i];
+    if (role === "off") return;
+    const notes = voice(role, p.notes, MP.octs[i]).map((n) => ({ ...n, n: role === "drums" ? n.n : n.n + MP.transpose }));
+    parts.push({ role, notes, program: p.hasProgram ? p.program : undefined, volume: p.volume });
+  });
+  if (!parts.length) { $("midiMsg").textContent = "Nothing to keep: give a part a role."; return; }
+  const slot = +$("songSlot").value, name = ($("songName").value || MP.name).trim();
+  const song = packSong({ parts, bpm: MP.file.bpm10 || MP.file.bpm, name });
+  $("midiMsg").textContent = "Sending…";
+  const reply = await new Promise((res) => {
+    songWait = res;
+    node.port.postMessage({ type: "sysex", frames: songSysex(song.bytes, slot) });
+    setTimeout(() => songDone(null), 5000);
+  });
+  const st = reply && reply.length >= 7 ? reply[reply.length - 2] : -1;
+  $("midiMsg").textContent = st === 0
+    ? `Kept in song slot ${slot + 1}: ${song.events} notes${song.dropped ? ` (${song.dropped} more didn't fit)` : ""}. On the FM-1: SEQ to the slot, then PLAY.`
+    : `The firmware didn't keep it: ${SONG_REPLY[st] || "no answer"}.`;
+}
+
 // ------------------------------------------------------------------ the sheet
 function renderParts() {
   const box = $("midiParts");
@@ -252,6 +289,7 @@ async function midiOpen(file) {
   MP.octs = MP.file.parts.map(() => "auto");
   MP.speed = 1; MP.transpose = 0;
   $("midiSpeed").value = "100"; $("midiTr").value = "0";
+  $("songName").value = MP.name.toUpperCase().slice(0, 23);
   $("midiTitle").textContent = `${MP.name} · ${MP.file.bpm} BPM · ${MP.file.parts.length} part${MP.file.parts.length === 1 ? "" : "s"}`;
   $("midiMsg").textContent = "Split automatically: change any part's role or octave.";
   renderParts();
@@ -261,6 +299,7 @@ $("midiFile").addEventListener("change", (e) => { const f = e.target.files[0]; e
 $("midiPlay").addEventListener("click", () => (MP.playing ? midiStop() : midiPlay()));
 $("midiLoop").addEventListener("change", () => { MP.loop = $("midiLoop").checked; });
 $("midiSounds").addEventListener("change", () => { MP.fileSounds = $("midiSounds").checked; if (MP.playing) midiPlay(); });
-$("midiBtn").addEventListener("click", () => { $("midiSoundsRow").hidden = !layout().gm; if (MP.file) { MP.roles = MP.roles.map((r) => (r === "off" || layout().roles.includes(r) ? r : "chords")); renderParts(); } });
+$("songKeep").addEventListener("click", songKeep);
+$("midiBtn").addEventListener("click", () => { $("midiSoundsRow").hidden = !layout().gm; $("songRow").hidden = !(current && current.songs); if (MP.file) { MP.roles = MP.roles.map((r) => (r === "off" || layout().roles.includes(r) ? r : "chords")); renderParts(); } });
 $("midiSpeed").addEventListener("change", () => { MP.speed = Math.max(0.25, Math.min(2, (+$("midiSpeed").value || 100) / 100)); if (MP.playing) midiPlay(); });
 $("midiTr").addEventListener("change", () => { MP.transpose = Math.max(-12, Math.min(12, Math.round(+$("midiTr").value || 0))); if (MP.playing) midiPlay(); });

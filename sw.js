@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // FM-1 Lite's service worker: the app works offline, and every firmware played once is kept for offline use.
 // App files: cache first, refreshed in the background. Firmwares and the catalogue: network first, cache when offline.
-const VERSION = 5;                      /* bump with every change to the app: phones then show "Update ready" */
+const VERSION = 6;                      /* bump with every change to the app: phones then show "Update ready" */
 const SHELL = "fm1lite-shell-v" + VERSION, FW = "fm1lite-firmware";
-const FILES = ["./", "index.html", "style.css", "app.js", "midi.js", "worklet.js", "catalog.json", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
+const FILES = ["./", "index.html", "style.css", "app.js", "midi.js", "song.js", "worklet.js", "catalog.json", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", (e) => {        /* the new version's files, fresh; it waits until the page says go */
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))));
 });

@@ -45,12 +45,18 @@ class FM1 extends AudioWorkletProcessor {
         } else if (this.kind === "store") {
           const max = ex.web_store_max ? ex.web_store_max() : 65536;
           for (const [obj, bytes] of Object.entries(m.save || {})) {
+            if (obj === "data") continue;
             const b = bytes.subarray(0, max);
             new Uint8Array(ex.memory.buffer, ex.web_store(+obj), b.length).set(b);
             ex.web_store_set_len(+obj, b.length);
           }
           this.sentWrites = ex.web_store_writes ? ex.web_store_writes() : -1;
         }
+        if (ex.web_data && m.save && m.save.data instanceof Uint8Array) {   /* the data area (TOUGE's songs): what was kept */
+          const area = new Uint8Array(ex.memory.buffer, ex.web_data(), ex.web_data_len());
+          if (m.save.data.length === area.length) area.set(m.save.data);
+        }
+        this.dataDirty = false;
         this.masterMax = this.kind === "store" ? 4095 : 1023;
         ex.web_master(Math.round(this.masterMax * m.master));
         ex.web_boot();
@@ -74,6 +80,22 @@ class FM1 extends AudioWorkletProcessor {
       else if (m.type === "midiclear") {            /* stop: what was scheduled goes, every note held lets go */
         this.mq = [];
         for (let ch = 0; ch < 16; ch++) { this.midi(0xB0 | ch, 123, 0); for (const n of m.held || []) if ((n >> 8) === ch) this.midi(0x80 | ch, n & 127, 0); }
+      }
+      else if (m.type === "sysex") {                /* SysEx frames to the firmware (a song), its answer back */
+        let reply = [];
+        if (ex.web_sx_in) {
+          for (const f of m.frames) {
+            if (f.length > ex.web_sx_in_max()) continue;
+            new Uint8Array(ex.memory.buffer, ex.web_sx_in_buf(), f.length).set(f);
+            ex.web_sx_in(f.length);
+          }
+          if (ex.web_sx_out_len && ex.web_sx_out_len()) {
+            reply = Array.from(new Uint8Array(ex.memory.buffer, ex.web_sx_out_buf(), ex.web_sx_out_len()));
+            ex.web_sx_out_clear();
+          }
+          this.dataDirty = true;
+        }
+        this.port.postMessage({ type: "sysexdone", reply });
       }
       else if (m.type === "visible") this.period = m.on ? 1 / 20 : 1 / 2;
     } catch (err) { this.fail(err); }
@@ -106,6 +128,7 @@ class FM1 extends AudioWorkletProcessor {
         const n = ex.web_store_len(o);
         if (n >= 0) out[o] = new Uint8Array(ex.memory.buffer, ex.web_store(o), n).slice();
       }
+      if (ex.web_data) out.data = new Uint8Array(ex.memory.buffer, ex.web_data(), ex.web_data_len()).slice();
     }
     return out;
   }
@@ -127,7 +150,7 @@ class FM1 extends AudioWorkletProcessor {
     }
     const writes = this.kind === "nor" ? (ex.web_flash_writes_count ? ex.web_flash_writes_count() : -1)
                  : this.kind === "store" ? (ex.web_store_writes ? ex.web_store_writes() : -1) : -1;
-    if (writes !== this.sentWrites) { this.sentWrites = writes; msg.save = this.collectSave(); }
+    if (writes !== this.sentWrites || this.dataDirty) { this.sentWrites = writes; this.dataDirty = false; msg.save = this.collectSave(); }
     if (msg.leds || msg.fb || msg.save || msg.load !== undefined) this.port.postMessage(msg, tr);
   }
 

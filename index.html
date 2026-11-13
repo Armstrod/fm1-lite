@@ -66,6 +66,11 @@
       <label class="row" id="midiSoundsRow" hidden><input type="checkbox" id="midiSounds" checked> The file's own sounds</label>
     </div>
     <div class="mctl"><button id="midiPlay" type="button">Play</button><span id="midiPos" class="fine"></span></div>
+    <div class="mctl" id="songRow" hidden>
+      <label>Song slot <select id="songSlot"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option></select></label>
+      <label>Name <input id="songName" type="text" maxlength="23" size="12"></label>
+      <button id="songKeep" type="button">Keep as a song</button>
+    </div>
     <p class="fine" id="midiMsg"></p>
   </div>
 </dialog>
@@ -106,6 +111,7 @@
 
 <div id="updateBar" hidden><span>Update ready</span><button type="button" id="updateGo">Reload</button></div>
 <script src="app.js"></script>
+<script src="song.js"></script>
 <script src="midi.js"></script>
 </body>
 </html>

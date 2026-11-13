@@ -232,6 +232,7 @@ async function switchOn(fw) {
         if (m.type === "ready") { clearTimeout(t); res(); }
         else if (m.type === "error") { clearTimeout(t); rej(new Error(m.message)); }
         else if (m.type === "crash") { stop(); showPower(true, "Restart"); status(fw.name + " stopped: " + m.message); }
+        else if (m.type === "sysexdone") { if (typeof songDone === "function") songDone(m.reply); }
         else if (m.type === "frame") {
           if (m.fb) pendingFb = m.fb;
           if (m.leds) lights(lastLeds = m.leds);
@@ -388,7 +389,7 @@ async function syncRepo(manual) {
         await DB.filePut(id, b);
         if (was) updated++; else added++;
       }
-      next.push({ id, name, author: cfg.name.split("/")[0], about: info.about || t.path, sha: t.sha, path: t.path, parts: info.parts || 4,
+      next.push({ id, name, author: cfg.name.split("/")[0], about: info.about || t.path, sha: t.sha, path: t.path, parts: info.parts || 4, songs: info.songs || 0,
                   repo: "https://github.com/" + cfg.name + "/tree/" + (cfg.branch || "main") + "/" + dir });
       old.delete(id);
     }
