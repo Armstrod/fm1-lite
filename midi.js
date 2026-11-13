@@ -32,11 +32,15 @@ function parseMidi(buf) {
       } else if (st === 0xF0 || st === 0xF7) { p += vlq(); }
       else {
         const hi = st & 0xF0, ch = st & 15, a = u8[p++], b = hi === 0xC0 || hi === 0xD0 ? 0 : u8[p++];
-        if (hi === 0x90 && b > 0) { open.set(ch + ":" + a, [tick, b]); tr.channels.add(ch); }
+        if (hi === 0x90 && b > 0) {
+          open.set(ch + ":" + a, [tick, b]); tr.channels.add(ch);
+          if (!tr.vol) tr.vol = {};                /* the level: CC 7 as it stands at the channel's first note */
+          if (tr.vol[ch] === undefined) tr.vol[ch] = tr.cc7 && tr.cc7[ch] !== undefined ? tr.cc7[ch] : null;
+        }
         else if (hi === 0x80 || (hi === 0x90 && b === 0)) {
           const k = ch + ":" + a, s = open.get(k);
           if (s) { tr.notes.push({ ch, n: a, t0: s[0], t1: Math.max(tick, s[0] + 1), v: s[1] }); open.delete(k); }
-        } else if (hi === 0xB0 && a === 7) { if (!tr.vol) tr.vol = {}; if (tr.vol[ch] === undefined) tr.vol[ch] = b; }
+        } else if (hi === 0xB0 && a === 7) { if (!tr.cc7) tr.cc7 = {}; tr.cc7[ch] = b; }
         else if (hi === 0xC0) { tr.programs.add(a); if (!tr.prog) tr.prog = {}; if (tr.prog[ch] === undefined) tr.prog[ch] = a; }
       }
     }
@@ -50,7 +54,7 @@ function parseMidi(buf) {
     for (const ch of tr.channels) {
       const notes = tr.notes.filter((n) => n.ch === ch);
       const program = tr.prog && tr.prog[ch] !== undefined ? tr.prog[ch] : 0;
-      const hasProgram = !!(tr.prog && tr.prog[ch] !== undefined), volume = tr.vol ? tr.vol[ch] : undefined;
+      const hasProgram = !!(tr.prog && tr.prog[ch] !== undefined), volume = tr.vol && tr.vol[ch] ? tr.vol[ch] : undefined;   /* (0 or none: 100) */
       if (notes.length) parts.push({ name: tr.name || (ch === 9 ? "Drums" : "Channel " + (ch + 1)), ch, notes, program, hasProgram, volume });
     }
   tempos.sort((a, b) => a[0] - b[0]);
