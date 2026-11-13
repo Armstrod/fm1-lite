@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#161618">
+<meta name="description" content="Play M-VAVE FM-1 community firmwares on your phone: each firmware's own browser build, on a light touch panel.">
+<title>FM-1 Lite</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="fwBtn" class="fw" type="button"><span id="fwName">Choose a firmware</span><small id="fwBy"></small><i>▾</i></button>
+    <div class="meter" id="meter"><span id="cpu">–</span><b><i id="cpuBar"></i></b></div>
+    <button id="menuBtn" class="icon" type="button" aria-label="Settings">⋯</button>
+  </header>
+
+  <section class="panel" id="panel">
+    <div class="screenwrap"><canvas id="screen" width="240" height="240"></canvas>
+      <div class="power" id="power"><button id="go" type="button">Switch on</button><p id="status"></p></div>
+    </div>
+    <div class="knobs top" id="knobsA"></div>
+    <div class="knobs four" id="knobsB"></div>
+    <div class="grid" id="grid"></div>
+    <div class="octs" id="octs"></div>
+    <div class="keys" id="keys"></div>
+  </section>
+</div>
+
+<dialog id="picker">
+  <div class="sheet">
+    <div class="sheethead"><b>Firmwares</b><button class="icon" data-close type="button" aria-label="Close">✕</button></div>
+    <input id="search" type="search" placeholder="Search" autocomplete="off">
+    <ul id="fwList"></ul>
+    <details class="addurl"><summary>Add a firmware by URL</summary>
+      <p>Paste the address of a browser build's <code>.wasm</code> file (Felucca or X0X style).</p>
+      <input id="addName" placeholder="Name"><input id="addUrl" placeholder="https://…/firmware.wasm">
+      <button id="addGo" type="button">Add</button>
+    </details>
+    <p class="fine">Catalogue updated <span id="catDate"></span>. ⚡ = heavy on phones.</p>
+  </div>
+</dialog>
+
+<dialog id="menu">
+  <div class="sheet">
+    <div class="sheethead"><b>Settings</b><button class="icon" data-close type="button" aria-label="Close">✕</button></div>
+    <label>Audio buffer
+      <select id="lat">
+        <option value="interactive">Small: least delay</option>
+        <option value="balanced">Medium</option>
+        <option value="playback">Large: safest against crackle</option>
+      </select></label>
+    <p class="fine">Takes effect the next time you switch on. Delay now: <span id="latNow">–</span></p>
+    <label class="row"><input type="checkbox" id="haptic"> Vibrate on press</label>
+    <label class="row"><input type="checkbox" id="wake" checked> Keep the screen on while playing</label>
+    <label class="row"><input type="checkbox" id="midiOn"> MIDI input (USB keyboard)</label>
+    <button id="fullBtn" type="button">Full screen</button>
+    <button id="powerOff" type="button">Switch off</button>
+    <button id="wipe" type="button" class="danger">Erase this firmware's saves</button>
+    <p class="fine" id="about"></p>
+    <p class="fine">FM-1 Lite plays each firmware's own browser build, fetched from its author's site. Firmwares are by their
+      authors under their own licences: see each one's source. This app: GPL-3.0, after Felucca's and X0X's browser emulators.
+      M-VAVE and FM-1 are trademarks of their owners; not affiliated. <a href="https://github.com/Armstrod/fm1-lite">Source</a></p>
+  </div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
