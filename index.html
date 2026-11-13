@@ -62,6 +62,17 @@
     <label class="row"><input type="checkbox" id="haptic"> Vibrate on press</label>
     <label class="row"><input type="checkbox" id="wake" checked> Keep the screen on while playing</label>
     <label class="row"><input type="checkbox" id="midiOn"> MIDI input (USB keyboard)</label>
+    <details class="repo" id="repoBox"><summary>Your firmware repo</summary>
+      <p class="fine">FM-1 Lite looks through this GitHub repository for <code>.wasm</code> files (each in its own folder,
+        with an optional <code>firmware.json</code>) and lists them, checking again each time the app opens.
+        A private repository needs a token: a fine-grained one, for this repository only, with Contents: read.
+        It stays on this phone.</p>
+      <input id="repoName" placeholder="owner/repository" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input id="repoBranch" placeholder="branch (main)" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input id="repoToken" type="password" placeholder="token (for a private repository)" autocomplete="off">
+      <button id="repoCheck" type="button">Save and check now</button>
+      <p class="fine" id="repoMsg"></p>
+    </details>
     <button id="fullBtn" type="button">Full screen</button>
     <button id="powerOff" type="button">Switch off</button>
     <button id="wipe" type="button" class="danger">Erase this firmware's saves</button>
@@ -72,6 +83,7 @@
   </div>
 </dialog>
 
+<div id="updateBar" hidden><span>Update ready</span><button type="button" id="updateGo">Reload</button></div>
 <script src="app.js"></script>
 </body>
 </html>

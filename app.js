@@ -42,7 +42,8 @@ const DB = (() => {
 // ------------------------------------------------------------------ catalogue
 let catalog = { firmwares: [] }, current = null;
 const custom = () => LS.get("custom", []);
-const allFirmwares = () => [...catalog.firmwares, ...custom().map((f) => ({ ...f, custom: true }))];
+const repoFws = () => LS.get("repoFw", []).map((f) => ({ ...f, file: true }));
+const allFirmwares = () => [...repoFws(), ...catalog.firmwares, ...custom().map((f) => ({ ...f, custom: true }))];
 const findFw = (id) => allFirmwares().find((f) => f.id === id);
 
 // ------------------------------------------------------------------ the panel
@@ -299,7 +300,7 @@ function renderList() {
     ul.appendChild(li);
   }
 }
-$("fwBtn").addEventListener("click", () => { $("search").value = ""; renderList(); $("picker").showModal(); });
+$("fwBtn").addEventListener("click", () => { $("search").value = ""; renderList(); $("picker").showModal(); syncRepo(false); });
 $("search").addEventListener("input", renderList);
 $("addFile").addEventListener("change", async (e) => {
   const file = e.target.files[0]; e.target.value = "";
@@ -338,13 +339,111 @@ $("wipe").addEventListener("click", async () => {
   $("wipe").textContent = "Erased: switch it off and on"; setTimeout(() => { $("wipe").textContent = "Erase this firmware's saves"; }, 2500);
 });
 
+// ------------------------------------------------------------------ your firmware repo: every .wasm in it, kept on the phone
+const repoCfg = () => Object.assign({ name: "Armstrod/Touge", branch: "main", token: "" }, LS.get("repo", {}));
+async function gh(cfg, path, raw) {
+  const h = { Accept: raw ? "application/vnd.github.raw" : "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  if (cfg.token) h.Authorization = "Bearer " + cfg.token;
+  const r = await fetch("https://api.github.com" + path, { headers: h, cache: "no-store" });
+  if (!r.ok) {
+    const e = new Error(r.status === 404 ? "not found: check the name, or add a token if it's private"
+      : r.status === 401 ? "the token was refused (expired, or mistyped)"
+      : r.status === 403 ? "GitHub said no (the token can't read it, or too many checks: try later)" : "GitHub answered " + r.status);
+    e.status = r.status; throw e;
+  }
+  return raw ? r.arrayBuffer() : r.json();
+}
+let syncing = false;
+async function syncRepo(manual) {
+  const cfg = repoCfg(), say = (t) => { $("repoMsg").textContent = t; };
+  if (!cfg.name || syncing || !navigator.onLine) { if (manual && !navigator.onLine) say("Offline: the firmwares already here still work."); return; }
+  if (!manual && Date.now() - LS.get("repoLast", 0) < 60000) return;
+  syncing = true;
+  if (manual) say("Checking " + cfg.name + "…");
+  try {
+    const [owner, repo] = cfg.name.split("/").map((x) => encodeURIComponent(x.trim()));
+    const tree = await gh(cfg, `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(cfg.branch || "main")}?recursive=1`);
+    const blobs = (tree.tree || []).filter((t) => t.type === "blob");
+    const wasms = blobs.filter((t) => /\.wasm$/i.test(t.path) && !/(^|\/)(build|node_modules|dist)\//.test(t.path));
+    const meta = new Map(blobs.filter((t) => /(^|\/)firmware\.json$/.test(t.path)).map((t) => [t.path.replace(/firmware\.json$/, ""), t]));
+    const old = new Map(LS.get("repoFw", []).map((f) => [f.id, f]));
+    const metaCache = LS.get("repoMeta", {});
+    const next = [];
+    let added = 0, updated = 0;
+    for (const t of wasms) {
+      const id = "repo:" + cfg.name + ":" + t.path, dir = t.path.includes("/") ? t.path.replace(/[^/]+$/, "") : "";
+      const folder = dir.split("/").filter(Boolean).pop() || "", file = t.path.split("/").pop().replace(/\.wasm$/i, "");
+      let info = {};
+      const m = meta.get(dir);
+      if (m) {
+        if (metaCache[m.sha]) info = metaCache[m.sha];
+        else try { info = JSON.parse(new TextDecoder().decode(await gh(cfg, `/repos/${owner}/${repo}/git/blobs/${m.sha}`, true))); metaCache[m.sha] = info; } catch {}
+      }
+      const sameFolder = wasms.filter((w) => w.path.startsWith(dir) && !w.path.slice(dir.length).includes("/")).length;
+      const name = (info.name && sameFolder === 1 ? info.name : sameFolder === 1 && folder ? folder : file).toString().toUpperCase();
+      const was = old.get(id);
+      if (!was || was.sha !== t.sha || !(await DB.fileGet(id))) {
+        const b = await gh(cfg, `/repos/${owner}/${repo}/git/blobs/${t.sha}`, true);
+        if (b.byteLength < 8 || new Uint32Array(b, 0, 1)[0] !== 0x6d736100) continue;
+        await DB.filePut(id, b);
+        if (was) updated++; else added++;
+      }
+      next.push({ id, name, author: cfg.name.split("/")[0], about: info.about || t.path, sha: t.sha, path: t.path,
+                  repo: "https://github.com/" + cfg.name + "/tree/" + (cfg.branch || "main") + "/" + dir });
+      old.delete(id);
+    }
+    for (const gone of old.values()) DB.fileDel(gone.id);
+    LS.set("repoFw", next); LS.set("repoMeta", metaCache); LS.set("repoLast", Date.now());
+    const what = `${next.length} firmware${next.length === 1 ? "" : "s"} in ${cfg.name}` + (added ? `, ${added} new` : "") + (updated ? `, ${updated} updated` : "");
+    say(what + ".");
+    if ((added || updated) && !manual) status(what + (node ? ". Switch off and on to load a new build." : "."));
+    if ($("picker").open) renderList();
+    if (current && current.id.startsWith("repo:")) current = findFw(current.id) || current;
+  } catch (err) {
+    say("Couldn't check " + cfg.name + ": " + (err && err.message || err));
+  } finally { syncing = false; }
+}
+(() => {
+  const c = repoCfg();
+  $("repoName").value = c.name; $("repoBranch").value = c.branch === "main" ? "" : c.branch; $("repoToken").value = c.token;
+  $("repoCheck").addEventListener("click", () => {
+    const name = $("repoName").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
+    if (name !== repoCfg().name) { for (const f of LS.get("repoFw", [])) DB.fileDel(f.id); LS.set("repoFw", []); }
+    LS.set("repo", { name, branch: $("repoBranch").value.trim() || "main", token: $("repoToken").value.trim() });
+    syncRepo(true);
+  });
+})();
+
 // ------------------------------------------------------------------ start up
 (async () => {
   try { catalog = await (await fetch("catalog.json", { cache: "no-cache" })).json(); }
   catch { try { catalog = await (await caches.match("catalog.json")).json(); } catch {} }
   $("catDate").textContent = catalog.updated || "–";
   current = findFw(LS.get("current", catalog.default)) || findFw(catalog.default) || allFirmwares()[0] || null;
+  syncRepo(false);
   showFw(); clearScreen();
   status(current ? "Tap to start " + current.name + ", or tap its name above to choose another." : "");
 })();
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// ------------------------------------------------------------------ updates: a bar when a new version is ready
+if ("serviceWorker" in navigator) addEventListener("load", async () => {
+  let reg;
+  try { reg = await navigator.serviceWorker.register("sw.js"); } catch { return; }
+  const ready = (w) => {
+    if (!w || !navigator.serviceWorker.controller) return;   /* (the first install: nothing to replace) */
+    $("updateBar").hidden = false;
+    $("updateGo").onclick = () => { $("updateGo").disabled = true; w.postMessage("skip"); };
+  };
+  if (reg.waiting) ready(reg.waiting);
+  reg.addEventListener("updatefound", () => {
+    const w = reg.installing;
+    if (w) w.addEventListener("statechange", () => { if (w.state === "installed") ready(w); });
+  });
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading) return;
+    reloading = true;
+    if (pendingSave && current) DB.put(current.id, pendingSave);
+    location.reload();
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+});

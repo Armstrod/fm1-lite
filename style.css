@@ -86,3 +86,11 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .fine { color: var(--dim); font-size: 11px; margin: 0; }
 .fine a { color: inherit; }
 .filebtn { padding: 10px; border-radius: 9px; border: 1px solid var(--edge); background: var(--part); text-align: center; flex-direction: row !important; justify-content: center; }
+#updateBar { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(12px, env(safe-area-inset-bottom));
+  background: var(--accent); color: #0b1a2e; border-radius: 12px; padding: 8px 8px 8px 14px; display: flex; gap: 12px;
+  align-items: center; font-weight: 600; box-shadow: 0 4px 18px rgba(0,0,0,.5); z-index: 20; }
+#updateBar[hidden] { display: none; }
+#updateBar button { border: 0; border-radius: 8px; padding: 7px 14px; background: #0b1a2e; color: #fff; font-weight: 600; }
+.repo { display: flex; flex-direction: column; gap: 6px; }
+.repo summary { color: var(--accent); font-size: 14px; }
+.repo input { margin-top: 6px; }
