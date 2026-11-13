@@ -3,6 +3,50 @@
  "default": "daurade",
  "firmwares": [
   {
+   "id": "aisling",
+   "name": "AISLING",
+   "author": "stephencummins",
+   "about": "Generative Irish ambient: harps in a jig's threes and a flute over a drone, with surf, wind and rain. Eight pieces that play forever.",
+   "license": "",
+   "repo": "https://github.com/stephencummins/fm1-aisling",
+   "wasm": "https://stephencummins.github.io/fm1-aisling/emu/amb.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "amb",
+   "name": "AMB-1",
+   "author": "charlesvestal",
+   "about": "Generative ambient after Eno's Music for Airports: breathing voices, bells on tape loops of unequal length, a gliding bass. Plays itself from switch-on.",
+   "license": "",
+   "repo": "https://github.com/charlesvestal/fm1-amb",
+   "wasm": "https://charlesvestal.github.io/fm1-amb/emu/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "atek303",
+   "name": "ATEK303",
+   "author": "animatek",
+   "about": "A TB-303-style acid bass line machine.",
+   "license": "",
+   "repo": "https://github.com/animatek/FM1-Animatek",
+   "wasm": "https://animatek.github.io/FM1-Animatek/atek303/play/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "blop",
+   "name": "Blop",
+   "author": "OSR-Experiment",
+   "about": "One-finger chord grids, chord rhythms, kick with sidechain, glide and reverb.",
+   "license": "",
+   "repo": "https://github.com/OSR-Experiment/OSR-1",
+   "wasm": "https://osr-experiment.github.io/OSR-1/emu/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "caravel",
    "name": "Caravel",
    "author": "BonszaiMusic",
@@ -25,6 +69,17 @@
    "quiet": false
   },
   {
+   "id": "choppah",
+   "name": "CHOPPAH",
+   "author": "profikid",
+   "about": "Breakbeat chopper: sixteen slices on the white keys, effect pads on the black, and a generator that rearranges the break as it plays.",
+   "license": "",
+   "repo": "https://github.com/profikid/fm1-break-choppah",
+   "wasm": "https://profikid.github.io/fm1-break-choppah/emu/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "cs1",
    "name": "CS-1",
    "author": "twochannels",
@@ -36,6 +91,17 @@
    "quiet": false
   },
   {
+   "id": "ctl",
+   "name": "CTL-1",
+   "author": "charlesvestal",
+   "about": "A MIDI controller with its own sounds: velocity and aftertouch from the keys, scale chords on the black keys, an arpeggiator and Euclidean tracks.",
+   "license": "",
+   "repo": "https://github.com/charlesvestal/fm1-ctl",
+   "wasm": "https://charlesvestal.github.io/fm1-ctl/emu/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "daurade",
    "name": "Daurade",
    "author": "delirioux",
@@ -43,6 +109,17 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/delirioux/daurade",
    "wasm": "https://delirioux.github.io/daurade/try/daurade.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "dub",
+   "name": "DUB-1",
+   "author": "sbegueria",
+   "about": "Generative dub techno: chord stabs into a tape echo, FM pings on uneven loops, sub bass grooves. Plays itself; you steer it.",
+   "license": "",
+   "repo": "https://github.com/sbegueria/fm1-dub",
+   "wasm": "https://sbegueria.github.io/fm1-dub/emu/amb.wasm",
    "heavy": false,
    "quiet": false
   },
@@ -69,10 +146,32 @@
    "quiet": false
   },
   {
+   "id": "echofield",
+   "name": "ECHOFIELD",
+   "author": "Philip-Bos",
+   "about": "Granular sampler: a few seconds of sound become slow clouds, sparkles, tape loops and swells.",
+   "license": "",
+   "repo": "https://github.com/Philip-Bos/echofield-fm1",
+   "wasm": "https://philip-bos.github.io/echofield-fm1/emulator/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "elixir",
+   "name": "Elixir",
+   "author": "dmajka",
+   "about": "Drum synth and sequencer, begun as a port of the Erica Synths LXR-02 firmware.",
+   "license": "",
+   "repo": "https://github.com/dmajka/elixir",
+   "wasm": "https://dmajka.github.io/elixir/try/elixir.wasm",
+   "heavy": true,
+   "quiet": false
+  },
+  {
    "id": "flyfish",
    "name": "Flyfish",
    "author": "delirioux",
-   "about": "One piece on the FM-1: Chopin's Étude Op. 10 No. 1 on a sampled Steinway D. It plays the étude, lets you shape it with rubato, touch and accents, practise it and move it. Built on Tuna and Felucca.",
+   "about": "One piece on the FM-1: Chopin's \u00c9tude Op. 10 No. 1 on a sampled Steinway D. It plays the \u00e9tude, lets you shape it with rubato, touch and accents, practise it and move it. Built on Tuna and Felucca.",
    "license": "GPL-3.0",
    "repo": "https://github.com/delirioux/flyfish",
    "wasm": "https://delirioux.github.io/flyfish/try/flyfish.wasm",
@@ -87,6 +186,17 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/PatttF/fm-106",
    "wasm": "https://patttf.github.io/fm-106/emu/fm106.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "fmfam",
+   "name": "FM-FAM",
+   "author": "davidamomusic",
+   "about": "DFAM-style 16-step sequencer and drum synth: two oscillators, parameter locks, random pages, scales.",
+   "license": "",
+   "repo": "https://github.com/davidamomusic/fm-fam",
+   "wasm": "https://davidamomusic.github.io/fm-fam/fam/docs/play/app.wasm",
    "heavy": false,
    "quiet": false
   },
@@ -113,6 +223,17 @@
    "quiet": false
   },
   {
+   "id": "jamtrack",
+   "name": "JAMTRACK",
+   "author": "Philip-Bos",
+   "about": "A backing band: drums, bass, chords and a synth line follow your chord progression in any key and time signature.",
+   "license": "",
+   "repo": "https://github.com/Philip-Bos/jamtrack-fm1",
+   "wasm": "https://philip-bos.github.io/jamtrack-fm1/emulator/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "jiant",
    "name": "JIANT FM",
    "author": "juanjiant-bit",
@@ -133,6 +254,39 @@
    "wasm": "https://eatyourgreensstudio-dotcom.github.io/karma-fm1/emu/sloop.wasm",
    "heavy": false,
    "quiet": false
+  },
+  {
+   "id": "krisjangle",
+   "name": "Kris Jangle",
+   "author": "doohinkus",
+   "about": "A Christmas phrase game: it plays the start of a public-domain carol, you play it back on the keys.",
+   "license": "",
+   "repo": "https://github.com/doohinkus/kris-jangle",
+   "wasm": "https://doohinkus.github.io/kris-jangle/emu/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "loafbreaker",
+   "name": "LOAF BREAKER",
+   "author": "FLEXOR-R",
+   "about": "FLEXOR's take on CHOPPAH: the Amen chopper with its own breaks and effects.",
+   "license": "",
+   "repo": "https://github.com/FLEXOR-R/loaf-breaker",
+   "wasm": "https://flexor-r.github.io/loaf-breaker/emu/app.wasm",
+   "heavy": false,
+   "quiet": true
+  },
+  {
+   "id": "loom",
+   "name": "LOOM-8",
+   "author": "charlesvestal",
+   "about": "Pocket groovebox: eight tracks on eleven engines (seven synths, a 303, sampler, break slicer, drum kit).",
+   "license": "",
+   "repo": "https://github.com/charlesvestal/fm1-loom",
+   "wasm": "https://charlesvestal.github.io/fm1-loom/emu/app.wasm",
+   "heavy": false,
+   "quiet": true
   },
   {
    "id": "makohai",
@@ -157,6 +311,17 @@
    "quiet": false
   },
   {
+   "id": "manifold",
+   "name": "MANIFOLD",
+   "author": "stets43",
+   "about": "Generative just intonation: two layers of points wander a Tonnetz map, so every interval is pure. Nothing is sequenced.",
+   "license": "",
+   "repo": "https://github.com/stets43/Manifold",
+   "wasm": "https://stets43.github.io/Manifold/emu/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "melodee",
    "name": "Melodee",
    "author": "keremimo",
@@ -164,6 +329,17 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/keremimo/melodee",
    "wasm": "https://keremimo.github.io/melodee/emu/melodee.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "mightyarp",
+   "name": "Mighty Arp",
+   "author": "NickCulbertson",
+   "about": "A 4-op FM/subtractive synth built around a chance arpeggiator: hold a chord and chance plays the melody. 50 sounds plus RANDOM.",
+   "license": "",
+   "repo": "https://github.com/NickCulbertson/FM1-Mighty-Arp",
+   "wasm": "https://nickculbertson.github.io/FM1-Mighty-Arp/emu/app.wasm",
    "heavy": false,
    "quiet": false
   },
@@ -179,6 +355,17 @@
    "quiet": false
   },
   {
+   "id": "nachtfahrt",
+   "name": "NACHTFAHRT",
+   "author": "FartyPants",
+   "about": "Generative Berlin School: 1970s-style sequencer music that builds and drifts on its own.",
+   "license": "",
+   "repo": "https://github.com/FartyPants/fm1-nachtfahrt",
+   "wasm": "https://fartypants.github.io/fm1-nachtfahrt/emu/amb.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "niagara",
    "name": "Niagara Drift",
    "author": "evanyerburgh",
@@ -187,6 +374,28 @@
    "repo": "https://github.com/evanyerburgh/niagara-drift",
    "wasm": "https://evanyerburgh.github.io/niagara-drift/omni.wasm",
    "heavy": true,
+   "quiet": false
+  },
+  {
+   "id": "ombak",
+   "name": "Ombak",
+   "author": "MadMooneyham",
+   "about": "Gamelan-inspired and meditative: you play the core melody, the ensemble weaves round it, every note shimmering with ombak beating.",
+   "license": "",
+   "repo": "https://github.com/MadMooneyham/Ombak",
+   "wasm": "https://madmooneyham.github.io/Ombak/emu/ombak.wasm",
+   "heavy": true,
+   "quiet": false
+  },
+  {
+   "id": "paperlagoon",
+   "name": "PaperLagoon",
+   "author": "hacha",
+   "about": "Generative environmental music: FM voices through tape echo and plate, wandering between seven worlds. Plays by itself.",
+   "license": "",
+   "repo": "https://github.com/hacha/paperlagoon",
+   "wasm": "https://hacha.github.io/paperlagoon/emu/app.wasm",
+   "heavy": false,
    "quiet": false
   },
   {
@@ -201,6 +410,17 @@
    "quiet": false
   },
   {
+   "id": "perf1",
+   "name": "PERF-1",
+   "author": "deamonSLINKY",
+   "about": "Live performance: nineteen genres that play themselves while you steer, an auto-DJ, an acid line that answers itself, FM voices.",
+   "license": "",
+   "repo": "https://github.com/deamonSLINKY/PERF-1",
+   "wasm": "https://deamonslinky.github.io/PERF-1/emu/amb.wasm",
+   "heavy": true,
+   "quiet": false
+  },
+  {
    "id": "gammawave",
    "name": "Pocket GammaWave",
    "author": "ShadowTune (GammaWave Audio)",
@@ -208,6 +428,17 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/fvalente/GammaWave-FM1",
    "wasm": "https://fvalente.github.io/GammaWave-FM1/felucca.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "polly",
+   "name": "Polly",
+   "author": "charlesvestal",
+   "about": "A pocket arranger after the Yamaha QY70: eight-instrument styles on General MIDI sounds, steered by the chords you play.",
+   "license": "",
+   "repo": "https://github.com/charlesvestal/fm1-polly",
+   "wasm": "https://charlesvestal.github.io/fm1-polly/emu/app.wasm",
    "heavy": false,
    "quiet": false
   },
@@ -230,6 +461,17 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/joshbartlettband-web/felucca-rainbow",
    "wasm": "https://joshbartlettband-web.github.io/felucca-rainbow/webapp/try/felucca.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "sardine",
+   "name": "Sardine",
+   "author": "delirioux",
+   "about": "Live club mixing: four layers (lead, chord, bass, drums) always playing, with pattern modifiers that wait for the bar.",
+   "license": "",
+   "repo": "https://github.com/delirioux/sardine",
+   "wasm": "https://delirioux.github.io/sardine/try/sardine.wasm",
    "heavy": false,
    "quiet": false
   },
@@ -263,6 +505,28 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/illuminus5/skiff",
    "wasm": "https://illuminus5.github.io/skiff/try/felucca.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "atlatl",
+   "name": "Skiff Atlatl",
+   "author": "LIkst4",
+   "about": "A Skiff fork: analog, 303 and Plaits-style oscillators, a Minimoog voice, blendable filters and per-lane drum models.",
+   "license": "",
+   "repo": "https://github.com/LIkst4/skiff-atlatl",
+   "wasm": "https://likst4.github.io/skiff-atlatl/emu/felucca.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "spellbox",
+   "name": "SPELLBOX",
+   "author": "pjac1810",
+   "about": "A talking spelling game after the 1978 Speak & Spell, with period LPC speech (in French).",
+   "license": "",
+   "repo": "https://github.com/pjac1810/spellbox",
+   "wasm": "https://pjac1810.github.io/spellbox/firmware.wasm",
    "heavy": false,
    "quiet": false
   },
