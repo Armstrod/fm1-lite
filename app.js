@@ -21,16 +21,21 @@ const saveSettings = () => LS.set("settings", settings);
 const DB = (() => {
   let p = null;
   const open = () => p || (p = new Promise((res, rej) => {
-    const r = indexedDB.open("fm1lite", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("saves");
+    const r = indexedDB.open("fm1lite", 2);
+    r.onupgradeneeded = () => {                   /* saves: per firmware; files: firmwares added from the phone */
+      for (const n of ["saves", "files"]) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n);
+    };
     r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
   }));
-  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => {
-    const t = db.transaction("saves", mode), q = fn(t.objectStore("saves")); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+  const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction(store, mode), q = fn(t.objectStore(store)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
   return {
-    get: (id) => tx("readonly", (s) => s.get(id)).catch(() => null),
-    put: (id, v) => tx("readwrite", (s) => s.put(v, id)).catch(() => {}),
-    del: (id) => tx("readwrite", (s) => s.delete(id)).catch(() => {}),
+    get: (id) => tx("saves", "readonly", (s) => s.get(id)).catch(() => null),
+    put: (id, v) => tx("saves", "readwrite", (s) => s.put(v, id)).catch(() => {}),
+    del: (id) => tx("saves", "readwrite", (s) => s.delete(id)).catch(() => {}),
+    fileGet: (id) => tx("files", "readonly", (s) => s.get(id)).catch(() => null),
+    filePut: (id, v) => tx("files", "readwrite", (s) => s.put(v, id)),
+    fileDel: (id) => tx("files", "readwrite", (s) => s.delete(id)).catch(() => {}),
   };
 })();
 
@@ -193,6 +198,11 @@ function makeContext() {
   return ac;
 }
 async function fetchWasm(fw) {
+  if (fw.file) {                                  /* added from the phone: kept in this browser */
+    const b = await DB.fileGet(fw.id);
+    if (!b) throw new Error("its file is gone from this browser: add it again");
+    return b.slice(0);
+  }
   const r = await fetch(fw.wasm, { cache: "no-cache" }).catch(() => null) || await caches.match(fw.wasm).catch(() => null);
   if (!r || !r.ok) throw new Error("couldn't download the firmware" + (navigator.onLine ? "" : " (offline, and not saved yet)"));
   const b = await r.arrayBuffer();
@@ -281,9 +291,9 @@ function renderList() {
     li.innerHTML = `${f.custom ? '<button class="x" type="button" aria-label="Remove">✕</button>' : ""}<b></b><small></small><p></p>`;
     li.querySelector("b").textContent = f.name + (f.heavy ? " ⚡" : "");
     li.querySelector("small").textContent = f.author + (f.quiet ? " · may need setup" : "");
-    li.querySelector("p").textContent = f.about || (f.custom ? f.wasm : "");
+    li.querySelector("p").textContent = f.about || (f.file ? "Added from a file on this phone." : f.custom ? f.wasm : "");
     li.addEventListener("click", (e) => {
-      if (e.target.classList.contains("x")) { LS.set("custom", custom().filter((c) => c.id !== f.id)); renderList(); return; }
+      if (e.target.classList.contains("x")) { LS.set("custom", custom().filter((c) => c.id !== f.id)); if (f.file) DB.fileDel(f.id); renderList(); return; }
       $("picker").close(); switchOn(f);
     });
     ul.appendChild(li);
@@ -291,6 +301,18 @@ function renderList() {
 }
 $("fwBtn").addEventListener("click", () => { $("search").value = ""; renderList(); $("picker").showModal(); });
 $("search").addEventListener("input", renderList);
+$("addFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0]; e.target.value = "";
+  if (!file) return;
+  const b = await file.arrayBuffer();
+  if (b.byteLength < 8 || new Uint32Array(b, 0, 1)[0] !== 0x6d736100) { $("addMsg").textContent = "That isn't a .wasm firmware build."; return; }
+  const name = $("addName").value.trim() || file.name.replace(/\.wasm$/i, "").toUpperCase();
+  const id = "file:" + file.name;
+  try { await DB.filePut(id, b); } catch { $("addMsg").textContent = "Couldn't keep it in this browser (storage full or private mode)."; return; }
+  LS.set("custom", [...custom().filter((c) => c.id !== id), { id, name, author: "from your phone", file: true }]);
+  $("addName").value = ""; $("addMsg").textContent = name + " added.";
+  renderList();
+});
 $("addGo").addEventListener("click", () => {
   const url = $("addUrl").value.trim(), name = $("addName").value.trim() || url.split("/").slice(-1)[0];
   if (!/^https:\/\/.+\.wasm(\?.*)?$/.test(url)) { $("addUrl").focus(); return; }

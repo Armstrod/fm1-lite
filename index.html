@@ -37,10 +37,13 @@
     <div class="sheethead"><b>Firmwares</b><button class="icon" data-close type="button" aria-label="Close">✕</button></div>
     <input id="search" type="search" placeholder="Search" autocomplete="off">
     <ul id="fwList"></ul>
-    <details class="addurl"><summary>Add a firmware by URL</summary>
-      <p>Paste the address of a browser build's <code>.wasm</code> file (Felucca or X0X style).</p>
-      <input id="addName" placeholder="Name"><input id="addUrl" placeholder="https://…/firmware.wasm">
-      <button id="addGo" type="button">Add</button>
+    <details class="addurl"><summary>Add a firmware</summary>
+      <p>A browser build's <code>.wasm</code> file (Felucca or X0X style): from a file on this phone, or by its web address.</p>
+      <input id="addName" placeholder="Name (optional)">
+      <label class="filebtn">Choose a .wasm file…<input id="addFile" type="file" accept=".wasm,application/wasm" hidden></label>
+      <input id="addUrl" placeholder="https://…/firmware.wasm">
+      <button id="addGo" type="button">Add by address</button>
+      <p class="fine" id="addMsg"></p>
     </details>
     <p class="fine">Catalogue updated <span id="catDate"></span>. ⚡ = heavy on phones.</p>
   </div>

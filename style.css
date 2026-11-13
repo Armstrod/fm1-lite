@@ -85,3 +85,4 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .addurl input { margin-top: 6px; }
 .fine { color: var(--dim); font-size: 11px; margin: 0; }
 .fine a { color: inherit; }
+.filebtn { padding: 10px; border-radius: 9px; border: 1px solid var(--edge); background: var(--part); text-align: center; flex-direction: row !important; justify-content: center; }
