@@ -80,6 +80,17 @@
    "quiet": false
   },
   {
+   "id": "choralroot",
+   "name": "ChoralRoot",
+   "author": "Quixotic7",
+   "about": "A chord instrument: one hand plays roots, the other shapes chords; voicing, key mode, performance modes, bass and a looper, on Felucca's engines.",
+   "license": "GPL-3.0",
+   "repo": "https://github.com/Quixotic7/ChoralRootFM1",
+   "wasm": "https://quixotic7.github.io/ChoralRootFM1/emu/choralroot.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
    "id": "cs1",
    "name": "CS-1",
    "author": "twochannels",
@@ -208,6 +219,17 @@
    "license": "",
    "repo": "https://github.com/davidamomusic/fm-fam",
    "wasm": "https://davidamomusic.github.io/fm-fam/fam/docs/play/app.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "fmel",
+   "name": "FMEL-1",
+   "author": "AntonioAltea",
+   "about": "Mellotron-style tape sounds (choir, flutes, strings) with a LOFI cassette page, FX and a sequencer. Based on zvenson's dinghy.",
+   "license": "GPL-3.0",
+   "repo": "https://github.com/AntonioAltea/fmel-1",
+   "wasm": "https://antonioaltea.github.io/fmel-1/mel.wasm",
    "heavy": false,
    "quiet": false
   },
@@ -362,6 +384,17 @@
    "license": "GPL-3.0",
    "repo": "https://github.com/Reytian/fm1-min1",
    "wasm": "https://reytian.github.io/fm1-min1/emu/min.wasm",
+   "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "monk",
+   "name": "MONK-1",
+   "author": "charlesvestal",
+   "about": "Twelve singers: MonkSynth's formant vocal synth, each character on its own stage, the mouth following the vowel.",
+   "license": "GPL-3.0",
+   "repo": "https://github.com/charlesvestal/fm1-monk",
+   "wasm": "https://charlesvestal.github.io/fm1-monk/emu/monk.wasm",
    "heavy": false,
    "quiet": false
   },

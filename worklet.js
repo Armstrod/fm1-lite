@@ -23,8 +23,23 @@ class FM1 extends AudioWorkletProcessor {
     if (m.type === "load") {
       try {
         const self = this;
+        /* WASI: a clock (the audio's own), and every byte written taken. Saying none were written has a libc's stdio
+         * try again for ever: the firmware's first print hangs it (after jiripisa's fm1-berlinan worklet) */
         const wasi = {
-          fd_write: (fd, iov, n, out) => { try { new DataView(self.ex.memory.buffer).setUint32(out, 0, true); } catch {} return 0; },
+          fd_write: (fd, iov, n, out) => {
+            try {
+              const dv = new DataView(self.ex.memory.buffer);
+              let len = 0;
+              for (let i = 0; i < n; i++) len += dv.getUint32(iov + i * 8 + 4, true);
+              dv.setUint32(out, len, true);
+            } catch {}
+            return 0;
+          },
+          clock_time_get: (id, prec, out) => {
+            try { new DataView(self.ex.memory.buffer).setBigUint64(out, BigInt(Math.round(currentTime * 1e9)), true); } catch {}
+            return 0;
+          },
+          proc_exit: () => 0,
         };
         const mod = (t) => new Proxy(t, { get: (o, k) => (k in o ? o[k] : noop) });
         const imports = new Proxy({ wasi_snapshot_preview1: mod(wasi) }, { get: (o, k) => (k in o ? o[k] : mod({})) });
@@ -35,7 +50,11 @@ class FM1 extends AudioWorkletProcessor {
         if (ex.emu_init) { this.loadEmu(ex, m); return; }
         this.screen = ex.web_screen || ex.web_fb;
         this.counter = ex.web_screen_draws || ex.web_blits || ex.web_fb_gen || null;
-        this.kind = ex.web_nor ? "nor" : ex.web_store ? "store" : "none";
+        this.kind = ex.web_nor ? "nor" : ex.web_store ? "store" : ex.web_flash_stage ? "flash" : ex.web_settings ? "settings" : "none";
+        if (!this.counter && ex.web_lcd_writes) this.counter = ex.web_lcd_writes;
+        this.btns = 0; this.keys = 0;
+        /* fmel-1 (AntonioAltea): buttons one at a time and the encoders numbered as Felucca's emulator does */
+        this.emuIds = !ex.web_buttons && !!ex.web_button;
         if (this.kind === "nor") {
           if (ex.web_nor_erase) ex.web_nor_erase();
           const nor = new Uint8Array(ex.memory.buffer, ex.web_nor(), ex.web_nor_size ? ex.web_nor_size() : 0x100000);
@@ -54,14 +73,29 @@ class FM1 extends AudioWorkletProcessor {
           }
           this.sentWrites = ex.web_store_writes ? ex.web_store_writes() : -1;
         }
+        else if (this.kind === "flash") {         /* ChoralRoot (Quixotic7): its flash one image, staged before boot */
+          const f = m.save && m.save.flash;
+          if (f instanceof Uint8Array && f.length === ex.web_flash_size()) {
+            new Uint8Array(ex.memory.buffer, ex.web_flash_stage(), f.length).set(f);
+            ex.web_flash_stage_len(f.length);
+          }
+        } else if (this.kind === "settings") {    /* fmel-1: its settings, one block */
+          const f = m.save && m.save.settings;
+          if (f instanceof Uint8Array && f.length) {
+            new Uint8Array(ex.memory.buffer, ex.web_settings(), f.length).set(f);
+            ex.web_settings_set_len(f.length);
+          }
+        }
         if (ex.web_data && m.save && m.save.data instanceof Uint8Array) {   /* the data area (TOUGE's songs): what was kept */
           const area = new Uint8Array(ex.memory.buffer, ex.web_data(), ex.web_data_len());
           if (m.save.data.length === area.length) area.set(m.save.data);
         }
         this.dataDirty = false;
         this.masterMax = this.kind === "store" ? 4095 : 1023;
+        this.sentWrites = this.kind === "flash" ? -2 : this.kind === "settings" ? ex.web_settings_writes() : this.sentWrites;
         ex.web_master(Math.round(this.masterMax * m.master));
         ex.web_boot();
+        if (this.kind === "flash") this.sentWrites = ex.web_flash_dirty();
         const seed = m.seed >>> 0;
         if (ex.web_tuna_seed) ex.web_tuna_seed(seed); else if (ex.web_seed) ex.web_seed(seed); else if (ex.web_set_seed) ex.web_set_seed(seed);
         this.port.postMessage({ type: "ready", rate: ex.web_sample_rate ? ex.web_sample_rate() : 44100, kind: this.kind });
@@ -76,7 +110,7 @@ class FM1 extends AudioWorkletProcessor {
     if (this.kind === "emu") { try { this.emuMessage(ex, m); } catch (err) { this.fail(err); } return; }
     try {
       if (m.type === "buttons" || m.type === "keys") this.queue.push(m);
-      else if (m.type === "enc") ex.web_enc(m.role, m.n | 0);
+      else if (m.type === "enc") ex.web_enc(this.emuIds ? [0, 1, 6, 2, 3, 4, 5][m.role] ?? 0 : m.role, m.n | 0);
       else if (m.type === "master") ex.web_master(Math.round(this.masterMax * m.value));
       else if (m.type === "midi") this.midi(m.data[0] | 0, m.data[1] | 0, m.data[2] | 0);
       else if (m.type === "midis") { for (const e of m.events) this.mq.push(e); this.mq.sort((a, b) => a[0] - b[0]); }
@@ -102,6 +136,48 @@ class FM1 extends AudioWorkletProcessor {
       }
       else if (m.type === "visible") this.period = m.on ? 1 / 20 : 1 / 2;
     } catch (err) { this.fail(err); }
+  }
+
+  /* buttons and keys, whichever way the build takes them: a mask (most), or one at a time (fmel-1's buttons, by
+   * Felucca's emulator's numbering; MONK-1's keys, with a velocity) */
+  setButtons(ex, b) {
+    if (ex.web_buttons) ex.web_buttons(b);
+    else if (ex.web_button) {
+      for (let i = 0; i < 14; i++) {
+        const bit = 1 << i;
+        if ((b ^ this.btns) & bit) ex.web_button(i < 12 ? i + 2 : i - 12, b & bit ? 1 : 0);
+      }
+    }
+    this.btns = b;
+  }
+  setKeys(ex, k) {
+    if (ex.web_keys) ex.web_keys(k);
+    else if (ex.web_key) {
+      for (let i = 0; i < 27; i++) {
+        const bit = 1 << i;
+        if ((k ^ this.keys) & bit) ex.web_key(i, k & bit ? 100 : 0, 0);
+      }
+    }
+    this.keys = k;
+  }
+  leds() {                                          /* [lit buttons, lit keys, dim buttons, dim keys], the panel's bits */
+    const ex = this.ex;
+    if (ex.web_lit_buttons) return [ex.web_lit_buttons() >>> 0, ex.web_lit_keys ? ex.web_lit_keys() >>> 0 : 0,
+                                    ex.web_dim_buttons ? ex.web_dim_buttons() >>> 0 : 0, ex.web_dim_keys ? ex.web_dim_keys() >>> 0 : 0];
+    if (this.kind === "flash" && ex.web_leds) {     /* ChoralRoot: a level a light, keys 0..26 then the buttons, PLAY's green */
+      const L = new Uint8Array(ex.memory.buffer, ex.web_leds(), 42), o = [0, 0, 0, 0];
+      for (let k = 0; k < 27; k++) { if (L[k] === 2) o[1] |= 1 << k; else if (L[k]) o[3] |= 1 << k; }
+      for (let i = 0; i < 14; i++) { const v = L[27 + i]; if (v === 2) o[0] |= 1 << i; else if (v) o[2] |= 1 << i; }
+      if (L[41]) o[0] |= 1 << 14;
+      return o.map((x) => x >>> 0);
+    }
+    if (ex.web_leds && this.emuIds) {               /* fmel-1: the buttons by Felucca's emulator's numbering, the keys */
+      const lo = ex.web_leds(0) >>> 0;
+      let b = 0;
+      for (let i = 0; i < 14; i++) if (lo >>> (i < 12 ? i + 2 : i - 12) & 1) b |= 1 << i;
+      return [b >>> 0, ex.web_leds(1) >>> 0, 0, 0];
+    }
+    return [0, 0, 0, 0];
   }
 
   /* ------------------------------------------------------------ the emu family (sabliran/sloop-web-emu) */
@@ -185,7 +261,10 @@ class FM1 extends AudioWorkletProcessor {
     if (!ex) return;
     if (ex.emu_midi) ex.emu_midi((((st >> 4) & 15) | (st << 8) | (d1 << 16) | (d2 << 24)) >>> 0);
     else if (ex.web_midi) ex.web_midi(st, d1, d2);
-    else if (ex.web_midi_in) ex.web_midi_in(0, ((st >> 4) & 15) | (st << 8) | (d1 << 16) | (d2 << 24));
+    else if (ex.web_midi_in) {
+      const pkt = (((st >> 4) & 15) | (st << 8) | (d1 << 16) | (d2 << 24)) >>> 0;
+      if (ex.web_midi_in.length === 1) ex.web_midi_in(pkt); else ex.web_midi_in(0, pkt);
+    }
   }
 
   fail(err) {
@@ -207,14 +286,14 @@ class FM1 extends AudioWorkletProcessor {
         if (n >= 0) out[o] = new Uint8Array(ex.memory.buffer, ex.web_store(o), n).slice();
       }
       if (ex.web_data) out.data = new Uint8Array(ex.memory.buffer, ex.web_data(), ex.web_data_len()).slice();
-    }
+    } else if (this.kind === "flash") out.flash = new Uint8Array(ex.memory.buffer, ex.web_flash(), ex.web_flash_size()).slice();
+    else if (this.kind === "settings") out.settings = new Uint8Array(ex.memory.buffer, ex.web_settings(), Math.max(0, ex.web_settings_len())).slice();
     return out;
   }
 
   publish() {
     const ex = this.ex, msg = { type: "frame" }, tr = [];
-    const leds = [ex.web_lit_buttons ? ex.web_lit_buttons() >>> 0 : 0, ex.web_lit_keys ? ex.web_lit_keys() >>> 0 : 0,
-                  ex.web_dim_buttons ? ex.web_dim_buttons() >>> 0 : 0, ex.web_dim_keys ? ex.web_dim_keys() >>> 0 : 0];
+    const leds = this.leds();
     const key = leds.join(",");
     if (key !== this.sentLeds) { this.sentLeds = key; msg.leds = leds; }
     if (this.frames >= 22050) { msg.load = this.busy / (this.frames / sampleRate * 1000); this.busy = this.frames = 0; }
@@ -227,7 +306,8 @@ class FM1 extends AudioWorkletProcessor {
       }
     }
     const writes = this.kind === "nor" ? (ex.web_flash_writes_count ? ex.web_flash_writes_count() : -1)
-                 : this.kind === "store" ? (ex.web_store_writes ? ex.web_store_writes() : -1) : -1;
+                 : this.kind === "store" ? (ex.web_store_writes ? ex.web_store_writes() : -1)
+                 : this.kind === "flash" ? ex.web_flash_dirty() : this.kind === "settings" ? ex.web_settings_writes() : -1;
     if (writes !== this.sentWrites || this.dataDirty) { this.sentWrites = writes; this.dataDirty = false; msg.save = this.collectSave(); }
     if (msg.leds || msg.fb || msg.save || msg.load !== undefined) this.port.postMessage(msg, tr);
   }
@@ -241,7 +321,7 @@ class FM1 extends AudioWorkletProcessor {
         const now = ex.web_now_ms ? ex.web_now_ms() : this.ms;
         while (this.queue.length && now - this.nextOk >= 0) {
           const m = this.queue.shift();
-          if (m.type === "buttons") ex.web_buttons(m.mask >>> 0); else ex.web_keys(m.mask >>> 0);
+          if (m.type === "buttons") this.setButtons(ex, m.mask >>> 0); else this.setKeys(ex, m.mask >>> 0);
           this.nextOk = now + HOLD_MS;
         }
       }
@@ -251,6 +331,7 @@ class FM1 extends AudioWorkletProcessor {
       }
       const out = outputs[0], n = out[0].length, t0 = clock();
       ex.web_render(n);
+      if (ex.web_out_clear) ex.web_out_clear();     /* (what the firmware sends out by MIDI: nowhere to go yet) */
       this.busy += clock() - t0;
       this.frames += n;
       this.ms += n * 1000 / sampleRate;
