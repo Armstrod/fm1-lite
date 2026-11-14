@@ -168,10 +168,21 @@
    "quiet": false
   },
   {
+   "id": "felucca",
+   "name": "Felucca",
+   "author": "hugelton",
+   "about": "The multi-engine, multitimbral synth and sequencer by Leo Kuroshita that SLOOP, Clipper and others grew from. In sabliran's web emulator.",
+   "license": "GPL-3.0",
+   "repo": "https://github.com/hugelton/Felucca",
+   "wasm": "https://sabliran.github.io/sloop-web-emu/felucca.wasm",
+   "heavy": true,
+   "quiet": false
+  },
+  {
    "id": "flyfish",
    "name": "Flyfish",
    "author": "delirioux",
-   "about": "One piece on the FM-1: Chopin's \u00c9tude Op. 10 No. 1 on a sampled Steinway D. It plays the \u00e9tude, lets you shape it with rubato, touch and accents, practise it and move it. Built on Tuna and Felucca.",
+   "about": "One piece on the FM-1: Chopin's Étude Op. 10 No. 1 on a sampled Steinway D. It plays the étude, lets you shape it with rubato, touch and accents, practise it and move it. Built on Tuna and Felucca.",
    "license": "GPL-3.0",
    "repo": "https://github.com/delirioux/flyfish",
    "wasm": "https://delirioux.github.io/flyfish/try/flyfish.wasm",
@@ -517,6 +528,17 @@
    "repo": "https://github.com/LIkst4/skiff-atlatl",
    "wasm": "https://likst4.github.io/skiff-atlatl/emu/felucca.wasm",
    "heavy": false,
+   "quiet": false
+  },
+  {
+   "id": "sloop",
+   "name": "SLOOP",
+   "author": "isod89",
+   "about": "A live four-track groovebox: three synths and a drum machine, many synthesis engines and drum kits, a song mode played with your hands. SLOOP 2.3 in sabliran's web emulator.",
+   "license": "GPL-3.0",
+   "repo": "https://github.com/isod89/sloop-fm1",
+   "wasm": "https://sabliran.github.io/sloop-web-emu/sloop.wasm",
+   "heavy": true,
    "quiet": false
   },
   {
