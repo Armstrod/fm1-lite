@@ -83,4 +83,23 @@ function songSysex(bytes, slot) {
 const SONG_REPLY = { 0: "kept", 1: "the slot or the length was refused", 2: "the flash wouldn't take it",
                      3: "some of it went missing", 4: "it didn't add up", 5: "it arrived damaged" };
 
-if (typeof module !== "undefined") module.exports = { SONG, SONG_PARTS, crc32, packSong, songSysex, SONG_REPLY };
+/* a DX7 32-voice bulk dump (F0 43 0n 09 20 00, 4096 bytes, checksum, F7; or the 4096 bytes alone) to the firmware's
+ * cartridge slot (slot 4: "TDX7" then the voices). Returns { bytes, names } or throws */
+function packDx7(file) {
+  const b = new Uint8Array(file);
+  let d = null;
+  for (let i = 0; i + 6 + 4096 <= b.length; i++)
+    if (b[i] === 0xF0 && b[i + 1] === 0x43 && (b[i + 2] & 0xF0) === 0 && b[i + 3] === 9 && b[i + 4] === 0x20 && b[i + 5] === 0) {
+      d = b.subarray(i + 6, i + 6 + 4096);
+      break;
+    }
+  if (!d && b.length === 4096) d = b;
+  if (!d) throw new Error("that isn't a DX7 32-voice bank (a .syx bulk dump)");
+  const bytes = new Uint8Array(4 + 4096);
+  bytes.set(d.map((x) => x & 127), 4);
+  const names = [];
+  for (let v = 0; v < 32; v++) names.push(String.fromCharCode(...d.subarray(v * 128 + 118, v * 128 + 128)).replace(/[^\x20-\x7e]/g, " ").trim());
+  return { bytes, names };
+}
+
+if (typeof module !== "undefined") module.exports = { SONG, SONG_PARTS, crc32, packSong, songSysex, SONG_REPLY, packDx7 };

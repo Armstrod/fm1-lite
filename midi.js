@@ -261,6 +261,23 @@ async function songKeep() {
     : `The firmware didn't keep it: ${SONG_REPLY[st] || "no answer"}.`;
 }
 
+/* a DX7 cartridge into the firmware (TOUGE NEXT: FM6 plays it, "DX7 CART" in its sound list) */
+async function dx7Load(f) {
+  if (!node || !current || !current.songs) { $("midiMsg").textContent = "Switch on TOUGE NEXT first."; return; }
+  let cart;
+  try { cart = packDx7(await f.arrayBuffer()); } catch (e) { $("midiMsg").textContent = e.message; return; }
+  $("midiMsg").textContent = "Sending…";
+  const reply = await new Promise((res) => {
+    songWait = res;
+    node.port.postMessage({ type: "sysex", frames: songSysex(cart.bytes, 4) });
+    setTimeout(() => songDone(null), 5000);
+  });
+  const st = reply && reply.length >= 7 ? reply[reply.length - 2] : -1;
+  $("midiMsg").textContent = st === 0
+    ? `Cartridge loaded: ${cart.names.slice(0, 6).join(", ")}… On the FM-1: ALGORITHM to "DX7 CART" (up to 3 parts).`
+    : `The firmware didn't take it: ${SONG_REPLY[st] || "no answer"}.`;
+}
+
 // ------------------------------------------------------------------ the sheet
 function renderParts() {
   const box = $("midiParts");
@@ -304,6 +321,7 @@ $("midiPlay").addEventListener("click", () => (MP.playing ? midiStop() : midiPla
 $("midiLoop").addEventListener("change", () => { MP.loop = $("midiLoop").checked; });
 $("midiSounds").addEventListener("change", () => { MP.fileSounds = $("midiSounds").checked; if (MP.playing) midiPlay(); });
 $("songKeep").addEventListener("click", songKeep);
-$("midiBtn").addEventListener("click", () => { $("midiSoundsRow").hidden = !layout().gm; $("songRow").hidden = !(current && current.songs); if (MP.file) { MP.roles = MP.roles.map((r) => (r === "off" || layout().roles.includes(r) ? r : "chords")); renderParts(); } });
+$("dx7File").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) dx7Load(f); });
+$("midiBtn").addEventListener("click", () => { $("midiSoundsRow").hidden = !layout().gm; $("songRow").hidden = !(current && current.songs); $("dx7Row").hidden = !(current && current.songs); if (MP.file) { MP.roles = MP.roles.map((r) => (r === "off" || layout().roles.includes(r) ? r : "chords")); renderParts(); } });
 $("midiSpeed").addEventListener("change", () => { MP.speed = Math.max(0.25, Math.min(2, (+$("midiSpeed").value || 100) / 100)); if (MP.playing) midiPlay(); });
 $("midiTr").addEventListener("change", () => { MP.transpose = Math.max(-12, Math.min(12, Math.round(+$("midiTr").value || 0))); if (MP.playing) midiPlay(); });
