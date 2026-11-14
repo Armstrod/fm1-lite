@@ -14,18 +14,19 @@
 </head>
 <body>
 <div id="app">
-  <header>
-    <button id="fwBtn" class="fw" type="button"><span id="fwName">Choose a firmware</span><small id="fwBy"></small><i>▾</i></button>
-    <div class="meter" id="meter"><span id="cpu">–</span><b><i id="cpuBar"></i></b></div>
-    <button id="midiBtn" class="icon" type="button" aria-label="Play a MIDI file">♪</button>
-    <button id="menuBtn" class="icon" type="button" aria-label="Settings">⋯</button>
-  </header>
-
   <section class="panel" id="panel">
     <div class="screenwrap"><canvas id="screen" width="240" height="240"></canvas>
       <div class="power" id="power"><button id="go" type="button">Switch on</button><p id="status"></p></div>
     </div>
     <div class="knobs top" id="knobsA"></div>
+    <div class="tools" id="tools">
+      <button id="fwBtn" class="fw" type="button"><span id="fwName">Choose a firmware</span><small id="fwBy"></small><i>▾</i></button>
+      <div class="toolrow">
+        <div class="meter" id="meter"><span id="cpu">–</span><b><i id="cpuBar"></i></b></div>
+        <button id="midiBtn" class="icon" type="button" aria-label="Play a MIDI file">♪</button>
+        <button id="menuBtn" class="icon" type="button" aria-label="Settings">⋯</button>
+      </div>
+    </div>
     <div class="octs" id="octs"></div>
     <div class="knobs four" id="knobsB"></div>
     <div class="grid" id="grid"></div>
