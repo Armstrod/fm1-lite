@@ -66,21 +66,28 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 
 /* on its side: the machine as it is. Top: the left cluster and OCT, the screen, then KNOB 1..4 over the buttons;
  * the keys the whole width below */
-@media (orientation: landscape) {
-  #app { max-width: none; }
-  .panel { flex: 1; grid-template-columns: minmax(0, 24fr) auto minmax(0, 44fr);
+/* the panel turned a quarter, when the layout chosen is against the phone's way up */
+.rot-cw #app, .rot-ccw #app { position: fixed; top: 0; left: 0; width: 100vh; height: 100vw; max-width: none; min-height: 0;
+  transform-origin: top left; overflow: hidden; }
+.rot-cw #app { transform: translateX(100vw) rotate(90deg); }
+.rot-ccw #app { transform: translateY(100vh) rotate(-90deg); }
+html.rot-cw .screenwrap { max-height: 56vw; }
+html.rot-cw .btn { height: clamp(28px, 7vw, 44px); }
+
+/* on its side (Settings → Layout: by the phone's turn, or always one way): the machine as it is */
+.lay-side #app { max-width: none; }
+.lay-side .panel { flex: 1; grid-template-columns: minmax(0, 24fr) auto minmax(0, 44fr);
     grid-template-areas: "a s b" "t s b" "o s g" "k k k"; grid-template-rows: auto auto auto minmax(0, 1fr);
     align-items: stretch; column-gap: 14px; }
-  .screenwrap { height: 100%; width: auto; aspect-ratio: 1; align-self: center; max-height: 56vh; }
-  .knobs.top { grid-row: 1; }
-  .knob { min-height: 0; padding: 2px 0; }
-  .knobs.four .knob svg { width: 34px; height: 34px; }
-  .grid { align-self: end; }
-  .btn { height: clamp(28px, 7vh, 44px); }
-  .keys { height: 100%; min-height: 110px; }
-  .tools { flex-direction: row; align-items: center; }
-  .tools .fw { flex: 1; }
-}
+.lay-side .screenwrap { height: 100%; width: auto; aspect-ratio: 1; align-self: center; max-height: 56vh; }
+.lay-side .knobs.top { grid-row: 1; }
+.lay-side .knob { min-height: 0; padding: 2px 0; }
+.lay-side .knobs.four .knob svg { width: 34px; height: 34px; }
+.lay-side .grid { align-self: end; }
+.lay-side .btn { height: clamp(28px, 7vh, 44px); }
+.lay-side .keys { height: 100%; min-height: 110px; }
+.lay-side .tools { flex-direction: row; align-items: center; }
+.lay-side .tools .fw { flex: 1; }
 
 dialog { border: 0; padding: 0; background: transparent; color: inherit; max-width: 560px; width: 100%; max-height: 100%;
   margin: auto auto 0; }

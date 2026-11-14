@@ -14,7 +14,7 @@ const LS = {
   get(k, d) { try { const v = localStorage.getItem("fm1lite." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("fm1lite." + k, JSON.stringify(v)); } catch {} },
 };
-const settings = Object.assign({ lat: "interactive", haptic: true, wake: true, midi: false, master: 0.7 }, LS.get("settings", {}));
+const settings = Object.assign({ lat: "interactive", layout: "auto", haptic: true, wake: true, midi: false, master: 0.7 }, LS.get("settings", {}));
 const saveSettings = () => LS.set("settings", settings);
 
 // ------------------------------------------------------------------ saves per firmware (IndexedDB)
@@ -78,7 +78,8 @@ function knob(parent, label, role) {
   });
   d.addEventListener("pointermove", (e) => {
     if (!drag) return;
-    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    const sx = e.clientX - drag.x, sy = e.clientY - drag.y, t = turned();
+    const dx = t === 1 ? sy : t === -1 ? -sy : sx, dy = t === 1 ? -sx : t === -1 ? sx : sy;   /* (the panel's own down and right) */
     const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
     drag.acc += delta; drag.x = e.clientX; drag.y = e.clientY;
     const step = role === "master" ? 2 : 9, n = Math.trunc(drag.acc / step);
@@ -125,8 +126,16 @@ button($("octs"), "OCT-", "OCT −"); button($("octs"), "OCT+", "OCT +");
 const kb = $("keys"), pitch = 100 / 16;
 WHITE.forEach((k, i) => { const d = document.createElement("div"); d.className = "key w"; d.style.left = (i * pitch + 0.35) + "%"; d.style.width = (pitch - 0.7) + "%"; keyEls[k] = d; kb.appendChild(d); });
 BLACK.forEach((k, j) => { const d = document.createElement("div"); d.className = "key b"; d.style.left = ((BLACK_AFTER[j] + 0.57) * pitch) + "%"; d.style.width = (pitch * 0.86) + "%"; keyEls[k] = d; kb.appendChild(d); });
+/* the panel turned a quarter (Settings → Layout, against the phone's own turn): a touch read in the panel's frame */
+const turned = () => document.documentElement.classList.contains("rot-cw") ? 1 : document.documentElement.classList.contains("rot-ccw") ? -1 : 0;
+function frac(el, x, y) {                    /* where (x, y) sits across and down el, 0..1, as the panel is drawn */
+  const r = el.getBoundingClientRect(), t = turned();
+  if (t === 1) return [(y - r.top) / r.height, (r.right - x) / r.width];
+  if (t === -1) return [(r.bottom - y) / r.height, (x - r.left) / r.width];
+  return [(x - r.left) / r.width, (y - r.top) / r.height];
+}
 function keyAt(x, y) {
-  const r = kb.getBoundingClientRect(), fx = (x - r.left) / r.width * 16, fy = (y - r.top) / r.height;
+  const [ax, fy] = frac(kb, x, y), fx = ax * 16;
   if (fx < 0 || fx >= 16 || fy < 0 || fy > 1) return -1;
   if (fy < 0.5) { const j = BLACK_AFTER.findIndex((a) => fx >= a + 0.57 && fx < a + 1.43); if (j >= 0) return BLACK[j]; }
   return WHITE[Math.floor(fx)];
@@ -330,6 +339,20 @@ for (const d of document.querySelectorAll("dialog")) {
 }
 $("lat").value = settings.lat; $("haptic").checked = settings.haptic; $("wake").checked = settings.wake; $("midiOn").checked = settings.midi;
 $("lat").addEventListener("change", () => { settings.lat = $("lat").value; saveSettings(); });
+/* the layout: the phone's turn, or the one chosen */
+const sideways = matchMedia("(orientation: landscape)");
+function applyLayout() {
+  const side = settings.layout === "side" || (settings.layout === "auto" && sideways.matches);
+  const h = document.documentElement;
+  h.classList.toggle("lay-side", side);
+  /* chosen against the phone (its auto-rotate off): the panel itself turned a quarter to suit */
+  h.classList.toggle("rot-cw", side && !sideways.matches);
+  h.classList.toggle("rot-ccw", !side && sideways.matches && settings.layout === "up");
+}
+sideways.addEventListener("change", applyLayout);
+$("layout").value = settings.layout;
+$("layout").addEventListener("change", () => { settings.layout = $("layout").value; saveSettings(); applyLayout(); });
+applyLayout();
 $("haptic").addEventListener("change", () => { settings.haptic = $("haptic").checked; saveSettings(); });
 $("wake").addEventListener("change", () => { settings.wake = $("wake").checked; saveSettings(); keepAwake(settings.wake && !!node); });
 $("midiOn").addEventListener("change", () => { settings.midi = $("midiOn").checked; saveSettings(); if (settings.midi) midiOn(); });
