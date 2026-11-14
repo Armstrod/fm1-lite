@@ -97,7 +97,8 @@ function knob(parent, label, role) {
   const end = () => { if (drag && role === "master") saveSettings(); drag = null; d.classList.remove("active"); };
   d.addEventListener("pointerup", end); d.addEventListener("pointercancel", end);
 }
-knob($("knobsA"), "VOL", "master"); knob($("knobsA"), "SELECT", 0); knob($("knobsA"), "PRESETS", 2); knob($("knobsA"), "ALGO", 1);
+// the FM-1's left cluster, as on the machine: MASTER SELECT / PRESETS ALGORITHM
+knob($("knobsA"), "MASTER", "master"); knob($("knobsA"), "SELECT", 0); knob($("knobsA"), "PRESETS", 2); knob($("knobsA"), "ALGORITHM", 1);
 ["KNOB 1", "KNOB 2", "KNOB 3", "KNOB 4"].forEach((n, i) => knob($("knobsB"), n, 3 + i));
 
 const btnHeld = new Map(), keyHeld = new Map(), btnEls = [], keyEls = [];

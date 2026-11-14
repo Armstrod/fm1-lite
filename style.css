@@ -20,9 +20,15 @@ header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .meter b { display: block; height: 5px; background: #000; border-radius: 3px; overflow: hidden; margin-top: 3px; }
 .meter i { display: block; height: 100%; width: 0; background: var(--green); transition: width .3s; }
 
-.panel { display: grid; gap: 7px; grid-template-columns: 1fr 1fr 1fr 1fr;
-  grid-template-areas: "s s s a" "s s s a" "b b b b" "g g g g" "o o o o" "k k k k"; }
-.screenwrap { grid-area: s; position: relative; aspect-ratio: 1; background: #000; border-radius: 8px; overflow: hidden; }
+/* The panel, laid out as the FM-1 is: on the left MASTER SELECT / PRESETS ALGORITHM and OCT − +, the screen beside them,
+ * then KNOB 1..4 and the two rows of buttons, the keys along the bottom. Upright, the machine's right half (the knobs and
+ * buttons) sits under its left; turned on its side, everything is where it is on the machine. */
+.panel { display: grid; gap: 7px; grid-template-columns: minmax(0, 38fr) minmax(0, 62fr);
+  grid-template-areas: "a s" "o s" "b b" "g g" "k k"; grid-template-rows: auto auto auto auto minmax(130px, 1fr); align-content: start;
+  flex: 1; padding: 8px; border-radius: 22px; background: #2b2d31;
+  box-shadow: inset 0 0 0 1px #3d4045; }
+.screenwrap { grid-area: s; position: relative; aspect-ratio: 1; background: #000; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 0 0 5px #111214; margin: 5px; }
 canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .power { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; background: rgba(0,0,0,.72); padding: 12px; text-align: center; }
@@ -30,36 +36,47 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 .power button { font-size: 17px; padding: 10px 24px; border: 0; border-radius: 10px; background: #fff; color: #000; }
 .power button:disabled { opacity: .5; }
 .power p { margin: 0; color: #ccc; font-size: 12px; }
-.knobs.top { grid-area: a; display: grid; grid-template-rows: repeat(4, 1fr); gap: 7px; }
+.knobs.top { grid-area: a; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
 .knobs.four { grid-area: b; display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
-.knob { position: relative; background: var(--part); border: 1px solid var(--edge); border-radius: 12px; touch-action: none;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 54px; }
-.knob svg { width: 26px; height: 26px; }
-.knob span { font-size: 10px; color: var(--dim); letter-spacing: .03em; margin-top: 2px; }
-.knob.active { background: var(--part2); border-color: var(--accent); }
-.knobs.top .knob { min-height: 0; }
-.grid { grid-area: g; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.octs { grid-area: o; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.btn { height: 44px; background: var(--part); border: 1px solid var(--edge); border-radius: 9px; font-size: 11px;
-  display: flex; align-items: center; justify-content: center; touch-action: none; letter-spacing: .02em; }
-.octs .btn { height: 36px; }
-.btn.dim { background: #3a3934; } .btn.lit { background: var(--lit); color: #111; } .btn.green { background: var(--green); color: #111; }
+.knob { position: relative; border-radius: 12px; touch-action: none;
+  display: flex; flex-direction: column-reverse; align-items: center; justify-content: center; min-height: 64px; }
+.knob svg { width: 40px; height: 40px; background: #1f2124; border-radius: 50%; box-shadow: 0 0 0 4px #26282c, 0 0 0 5px #44474c; }
+.knob span { font-size: 10px; color: #c9cacd; letter-spacing: .05em; margin-bottom: 7px; font-weight: 600; }
+.knob.active { background: #34373c; }
+.knob.active svg { box-shadow: 0 0 0 4px #26282c, 0 0 0 6px var(--accent); }
+.octs { grid-area: o; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #26282c; border-radius: 12px; padding: 6px; align-self: end; }
+.grid { grid-area: g; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; background: #26282c; border-radius: 14px; padding: 7px; }
+.btn { height: 44px; background: #2e3135; border: 1px solid #4a4d52; border-radius: 9px; font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; touch-action: none; letter-spacing: .04em; color: #e8e8ea; }
+.octs .btn { height: 34px; }
+.btn.dim { background: #4a4336; } .btn.lit { background: var(--lit); color: #111; } .btn.green { background: var(--green); color: #111; }
 .btn.rec { color: var(--red); } .btn.lit.rec { color: #a00; }
 .btn.held { outline: 2px solid var(--accent); outline-offset: -2px; }
-.keys { grid-area: k; position: relative; height: clamp(130px, 24vh, 200px); touch-action: none; }
-.key { position: absolute; border-radius: 7px; border: 1px solid var(--edge); background: #0c0c0d; }
-.key.w { top: 51%; height: 49%; } .key.b { top: 0; height: 48%; }
-.key.dim { background: #3a3a3c; } .key.lit { background: #ececee; } .key.held { outline: 2px solid var(--accent); outline-offset: -2px; }
+.keys { grid-area: k; position: relative; height: 100%; max-height: 360px; touch-action: none; background: #26282c;
+  border-radius: 16px; }
+/* the keys: rounded pads, the black ones a row above, as the FM-1's silicone keys */
+.key { position: absolute; border-radius: 999px; background: #d9dadc; }
+.key.w { top: 47%; height: 48%; } .key.b { top: 6%; height: 36%; background: #c9cacd; }
+.key.dim { background: #e8c9b6; } .key.b.dim { background: #8ac6bf; }
+.key.lit { background: #f6b48e; } .key.b.lit { background: #4cc3b6; }
+.key.held { outline: 3px solid var(--accent); outline-offset: -3px; }
 
-/* landscape phone: screen + knobs left, buttons + keys right */
-@media (orientation: landscape) and (max-height: 560px) {
+/* on its side: the machine as it is. Top: the left cluster and OCT, the screen, then KNOB 1..4 over the buttons;
+ * the keys the whole width below */
+@media (orientation: landscape) {
   #app { max-width: none; }
-  .panel { grid-template-columns: minmax(0, 34vh) 64px minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
-    grid-template-areas: "s a g" "s a o" "b b k" "b b k"; align-items: start; }
-  .screenwrap { width: 100%; }
-  .knobs.four { grid-template-columns: repeat(4, 1fr); }
-  .keys { height: 100%; min-height: 120px; }
+  .panel { flex: 1; grid-template-columns: minmax(0, 20fr) auto minmax(0, 44fr); grid-template-rows: auto 1fr minmax(0, 46%);
+    grid-template-areas: "a s b" "o s g" "k k k"; align-items: stretch; column-gap: 14px; }
+  .screenwrap { height: 100%; width: auto; aspect-ratio: 1; align-self: center; max-height: 46vh; }
+  .knobs.top { grid-row: 1; }
+  .knob { min-height: 0; padding: 2px 0; }
+  .knobs.four .knob svg { width: 34px; height: 34px; }
+  .grid { align-self: end; }
+  .btn { height: clamp(28px, 7vh, 44px); }
+  .keys { height: 100%; min-height: 110px; }
   header { margin-bottom: 4px; }
+  header .fw { padding: 4px 10px; }
+  header .icon { height: 32px; }
 }
 
 dialog { border: 0; padding: 0; background: transparent; color: inherit; max-width: 560px; width: 100%; max-height: 100%;
